@@ -1,15 +1,19 @@
-export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-api-key');
-  if (req.method === 'OPTIONS') return res.status(200).end();
-  if (req.method !== 'POST') return res.status(405).end();
+export const config = { runtime: 'edge' };
 
-  const apiKey = req.headers['x-api-key'];
-  if (!apiKey) return res.status(400).json({ error: 'Missing API key' });
+export default async function handler(req) {
+  const cors = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, x-api-key',
+  };
+  if (req.method === 'OPTIONS') return new Response(null, { status: 200, headers: cors });
+  if (req.method !== 'POST') return new Response('Method Not Allowed', { status: 405, headers: cors });
 
-  const { prompt } = req.body;
-  if (!prompt) return res.status(400).json({ error: 'Missing prompt' });
+  const apiKey = req.headers.get('x-api-key');
+  if (!apiKey) return new Response(JSON.stringify({ error: 'Missing API key' }), { status: 400, headers: { ...cors, 'Content-Type': 'application/json' } });
+
+  const { prompt } = await req.json();
+  if (!prompt) return new Response(JSON.stringify({ error: 'Missing prompt' }), { status: 400, headers: { ...cors, 'Content-Type': 'application/json' } });
 
   try {
     const response = await fetch(
@@ -24,15 +28,15 @@ export default async function handler(req, res) {
       }
     );
     const data = await response.json();
-    if (data.error) return res.status(400).json({ error: data.error.message });
+    if (data.error) return new Response(JSON.stringify({ error: data.error.message }), { status: 400, headers: { ...cors, 'Content-Type': 'application/json' } });
 
     const parts = data.candidates?.[0]?.content?.parts || [];
     const imagePart = parts.find(p => p.inlineData);
-    if (!imagePart) return res.status(500).json({ error: 'No image in response' });
+    if (!imagePart) return new Response(JSON.stringify({ error: 'No image in response' }), { status: 500, headers: { ...cors, 'Content-Type': 'application/json' } });
 
     const { data: b64, mimeType } = imagePart.inlineData;
-    res.status(200).json({ dataUrl: `data:${mimeType};base64,${b64}` });
+    return new Response(JSON.stringify({ dataUrl: `data:${mimeType};base64,${b64}` }), { status: 200, headers: { ...cors, 'Content-Type': 'application/json' } });
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: { ...cors, 'Content-Type': 'application/json' } });
   }
 }
