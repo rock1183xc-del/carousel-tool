@@ -234,12 +234,9 @@
         </div>
         <div class="imc" data-m="dalle" onclick="selImgMode('dalle')">
           <div class="imc-icon">✨</div>
-          <div class="imc-name">Gemini 生成</div>
-          <div class="imc-desc">客製化 · 使用 Gemini Key</div>
+          <div class="imc-name">AI 生圖</div>
+          <div class="imc-desc">免費 · 依主題生成</div>
         </div>
-      </div>
-      <div class="dalle-box" id="dalleBox">
-        <div class="hint">使用頂部輸入的 Gemini Key 生成圖片，稍慢但更貼合主題。</div>
       </div>
     </div>
 
@@ -313,7 +310,7 @@ async function regenAllImages() {
   const stTxt = document.getElementById('stTxt');
   const st = document.getElementById('status');
   st.classList.add('show');
-  stTxt.textContent = imgMode === 'dalle' ? 'Gemini 生成圖片中…' : '切換圖片中…';
+  stTxt.textContent = imgMode === 'dalle' ? 'AI 生圖中…' : '切換圖片中…';
   const taDesc = [...selectedTAs, document.getElementById('taCustom').value.trim()].filter(Boolean).join('、');
   const parsed = { slides: slidesData, bg: bgData };
   imgUrls = await fetchImages(parsed, taDesc);
@@ -428,7 +425,7 @@ async function generate() {
     slidesData = parsed.slides;
     bgData = parsed.bg || {};
 
-    stTxt.textContent = imgMode==='dalle' ? 'Gemini 生成圖片中…' : '搜尋背景圖片…';
+    stTxt.textContent = imgMode==='dalle' ? 'AI 生圖中…' : '搜尋背景圖片…';
     imgUrls = await fetchImages(parsed, taDesc);
 
     renderCarousel(slidesData, bgData, imgUrls);
@@ -522,17 +519,9 @@ function unsplashUrl(kw) {
 }
 
 async function dalleGen(kw, taDesc, key) {
-  try {
-    const prompt = `Atmospheric background photo for Instagram: ${kw}. ${taDesc ? `Audience: ${taDesc}.` : ''} High quality, cinematic, no text, square format, subtle dark vignette.`;
-    const r = await fetch('/api/image', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': key },
-      body: JSON.stringify({ prompt })
-    });
-    const d = await r.json();
-    if (d.error) throw new Error(d.error);
-    return d.dataUrl;
-  } catch(e) { console.error('Gemini Image:', e); return null; }
+  const prompt = `Instagram background photo: ${kw}${taDesc ? `, for ${taDesc}` : ''}. Cinematic, high quality, no text, square format.`;
+  const seed = Math.floor(Math.random() * 99999);
+  return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=720&height=720&nologo=true&seed=${seed}`;
 }
 
 // ── Render Carousel ──
