@@ -185,9 +185,9 @@
 
 <!-- API Key Banner -->
 <div class="key-banner">
-  <label>Anthropic API Key</label>
-  <input type="password" id="anthropicKey" placeholder="sk-ant-…" autocomplete="off" />
-  <span class="key-hint">沒有 Key？<a href="https://console.anthropic.com/keys" target="_blank">前往申請 →</a></span>
+  <label>Gemini API Key</label>
+  <input type="password" id="geminiKey" placeholder="AIza…" autocomplete="off" />
+  <span class="key-hint">沒有 Key？<a href="https://aistudio.google.com/apikey" target="_blank">前往申請 →</a></span>
 </div>
 
 <div class="workspace">
@@ -294,8 +294,8 @@ let slideCount = 5, imgMode = 'unsplash', applyMode = 'shared';
 let selectedTAs = [], fetchedUrls = [], curSlide = 0, slidesData = [], bgData = {};
 let imgUrls = [];
 
-function getAnthropicKey() {
-  return document.getElementById('anthropicKey').value.trim();
+function getGeminiKey() {
+  return document.getElementById('geminiKey').value.trim();
 }
 
 // ── UI ──
@@ -324,19 +324,17 @@ function selTab(name, btn) {
   document.getElementById('tc-'+name).classList.add('on');
 }
 
-// ── Anthropic API call ──
+// ── Gemini API call ──
 async function callClaude(userPrompt, system) {
-  const key = getAnthropicKey();
-  if (!key) throw new Error('請先輸入 Anthropic API Key！');
+  const key = getGeminiKey();
+  if (!key) throw new Error('請先輸入 Gemini API Key！');
   const res = await fetch('/api/claude', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'x-api-key': key,
-      'anthropic-version': '2023-06-01'
+      'x-api-key': key
     },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-6',
       max_tokens: 4096,
       system: system || '',
       messages: [{ role: 'user', content: userPrompt }]
@@ -352,7 +350,7 @@ async function addUrl() {
   const input = document.getElementById('urlInput');
   const url = input.value.trim();
   if (!url || !url.startsWith('http')) return;
-  if (!getAnthropicKey()) { alert('請先輸入 Anthropic API Key！'); return; }
+  if (!getGeminiKey()) { alert('請先輸入 Gemini API Key！'); return; }
   input.value = '';
   const btn = document.getElementById('urlBtn');
   btn.disabled = true; btn.textContent = '讀取中…';
@@ -389,7 +387,7 @@ async function generate() {
   const custom = document.getElementById('taCustom').value.trim();
   const taDesc = [...selectedTAs, ...(custom?[custom]:[])].join('、');
   if (!topic && !urlTxt) { alert('請輸入主題或讀取至少一個網址！'); return; }
-  if (!getAnthropicKey()) { alert('請先輸入 Anthropic API Key！'); return; }
+  if (!getGeminiKey()) { alert('請先輸入 Gemini API Key！'); return; }
   if (imgMode==='dalle' && !document.getElementById('openaiKey').value.trim()) {
     alert('請輸入 OpenAI API Key！'); return;
   }
