@@ -9,8 +9,7 @@ export default async function handler(req, res) {
   if (!apiKey) return res.status(400).json({ error: { message: 'Missing API key' } });
 
   const { system, messages, max_tokens } = req.body;
-  const userText = messages?.[0]?.content || '';
-
+  const userText = messages?.[0]?.content || ''
   const geminiBody = {
     contents: [{ role: 'user', parts: [{ text: userText }] }],
     generationConfig: { maxOutputTokens: max_tokens || 4096 }
@@ -19,7 +18,7 @@ export default async function handler(req, res) {
 
   try {
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
