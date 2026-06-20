@@ -499,7 +499,7 @@ async function fetchImages(parsed, taDesc) {
 
 function unsplashUrl(kw) {
   const sig = Math.floor(Math.random() * 9999);
-  return `https://source.unsplash.com/720x720/?${encodeURIComponent(kw.trim())}&sig=${sig}`;
+  return `https://loremflickr.com/720/720/${encodeURIComponent(kw.trim())}?lock=${sig}`;
 }
 
 async function dalleGen(kw, taDesc, key) {
