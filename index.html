@@ -503,7 +503,7 @@ async function fetchImages(parsed, taDesc) {
       return Array(n).fill(url);
     }
   } else {
-    const key = document.getElementById('openaiKey').value.trim();
+    const key = getGeminiKey();
     if (isPer) {
       const kws = bg.keywords_per_slide || Array(n).fill(bg.shared_keyword || 'lifestyle');
       const results = [];
