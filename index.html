@@ -461,9 +461,9 @@ function buildPrompt(topic, urlTxt, taDesc, count, apply) {
 ${topic ? `主題：${topic}` : ''}${urlTxt ? `\n\n參考內容：\n${urlTxt}` : ''}
 ${taDesc ? `\n目標受眾（TA）：${taDesc}` : ''}
 
-背景圖片規劃（Unsplash 搜尋關鍵字，英文）：
-${isPer ? `- 每張各給一個關鍵字（依內容主題）` : `- 整組共用一個關鍵字`}
-- 要讓 TA 一眼產生共鳴，例：媽媽族→"mother child family"，減重族→"healthy fitness lifestyle"
+背景圖片關鍵字（英文，描述畫面氛圍，不要人像）：
+${isPer ? `- 每張各給一個關鍵字（依該張內容主題）` : `- 整組共用一個關鍵字`}
+- 要反映**內容主題的視覺氛圍**，而非 TA 的外形，例：肝臟健康→"glowing liver anatomy dark background"，壓力疲勞→"dark moody shadows fatigue"，瘦身→"fresh vegetables healthy food"，財富→"gold coins abundance prosperity"
 
 只回傳 JSON：
 {
@@ -514,12 +514,13 @@ async function fetchImages(parsed, taDesc) {
 }
 
 function unsplashUrl(kw) {
-  const sig = Math.floor(Math.random() * 9999);
-  return `https://picsum.photos/seed/${encodeURIComponent(kw.trim().replace(/\s+/g,'-'))}-${sig}/720/720`;
+  const seed = Math.floor(Math.random() * 99999);
+  const prompt = `${kw}, realistic photo, atmospheric, cinematic lighting, no people, no text, square format`;
+  return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=720&height=720&nologo=true&seed=${seed}`;
 }
 
 async function dalleGen(kw, taDesc, key) {
-  const prompt = `Instagram background photo: ${kw}${taDesc ? `, for ${taDesc}` : ''}. Cinematic, high quality, no text, square format.`;
+  const prompt = `Instagram background: ${kw}. Abstract atmospheric scene, cinematic mood, no people, no portrait, no text, square format, dark vignette.`;
   const seed = Math.floor(Math.random() * 99999);
   return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=720&height=720&nologo=true&seed=${seed}`;
 }
