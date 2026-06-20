@@ -428,7 +428,7 @@ async function generate() {
     slidesData = parsed.slides;
     bgData = parsed.bg || {};
 
-    stTxt.textContent = imgMode==='dalle' ? 'DALL-E 生成圖片…' : '搜尋背景圖片…';
+    stTxt.textContent = imgMode==='dalle' ? 'Gemini 生成圖片中…' : '搜尋背景圖片…';
     imgUrls = await fetchImages(parsed, taDesc);
 
     renderCarousel(slidesData, bgData, imgUrls);
