@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>輪播貼文生成器</title>
+<style>
+  :root {
+    --bg: #0f0f13; --surface: #18181f; --surface2: #22222c;
+    --border: #2e2e3a; --accent: #b57bee; --accent2: #7b5ea7;
+    --glow: rgba(181,123,238,0.15); --text: #f0eef8;
+    --muted: #8a88a0; --dim: #5a5870;
+    --ig1: #f58529; --ig2: #dd2a7b; --ig3: #8134af;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Helvetica Neue', Arial, sans-serif; min-height: 100vh; display: flex; flex-direction: column; }
+
+  header { padding: 13px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+  .logo { width: 27px; height: 27px; border-radius: 7px; background: linear-gradient(135deg,var(--ig1),var(--ig2),var(--ig3)); display: flex; align-items: center; justify-content: center; font-size: 13px; }
+  header h1 { font-size: 14px; font-weight: 600; }
+  header small { font-size: 11px; color: var(--muted); margin-left: 3px; }
+
+  /* API Key Banner */
+  .key-banner { background: var(--surface); border-bottom: 1px solid var(--border); padding: 10px 20px; display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+  .key-banner label { font-size: 11px; color: var(--muted); white-space: nowrap; }
+  .key-banner input { flex: 1; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 12px; padding: 6px 10px; outline: none; font-family: inherit; max-width: 420px; }
+  .key-banner input:focus { border-color: var(--accent2); }
+  .key-hint { font-size: 10px; color: var(--dim); }
+  .key-hint a { color: var(--accent); text-decoration: none; }
+
+  .workspace { flex: 1; display: grid; grid-template-columns: 330px 1fr; min-height: 0; overflow: hidden; }
+
+  .left { border-right: 1px solid var(--border); padding: 14px 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 13px; }
+  .lbl { font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--dim); margin-bottom: 5px; }
+  .grp { display: flex; flex-direction: column; gap: 6px; }
+
+  textarea, input[type="text"], input[type="password"] {
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
+    color: var(--text); font-size: 13px; padding: 8px 10px; resize: none; outline: none;
+    transition: border-color .2s; font-family: inherit; width: 100%;
+  }
+  textarea:focus, input:focus { border-color: var(--accent2); }
+  textarea { min-height: 70px; }
+
+  .divider { display: flex; align-items: center; gap: 8px; color: var(--dim); font-size: 10px; }
+  .divider::before, .divider::after { content:''; flex:1; height:1px; background:var(--border); }
+
+  .url-row { display: flex; gap: 6px; }
+  .url-row input { flex: 1; }
+  .btn-s { background: var(--surface2); border: 1px solid var(--border); border-radius: 7px; color: var(--muted); font-size: 11px; padding: 0 10px; cursor: pointer; white-space: nowrap; transition: all .2s; font-family: inherit; height: 36px; }
+  .btn-s:hover { border-color: var(--accent2); color: var(--accent); }
+  .btn-s:disabled { opacity: .4; cursor: not-allowed; }
+
+  .chip { display: flex; align-items: center; gap: 5px; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 5px 8px; font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .chip .ct { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .chip-st { font-size: 10px; padding: 1px 5px; border-radius: 3px; flex-shrink: 0; }
+  .chip-st.ok { background: rgba(92,184,92,.15); color: #5cb85c; }
+  .chip-st.spin { background: var(--glow); color: var(--accent); }
+  .chip-st.err { background: rgba(220,80,80,.15); color: #dc5050; }
+  .chip-rm { background: none; border: none; color: var(--dim); cursor: pointer; font-size: 13px; padding: 0 2px; }
+
+  .tags { display: flex; flex-wrap: wrap; gap: 5px; }
+  .tag { background: var(--surface2); border: 1px solid var(--border); border-radius: 20px; padding: 3px 9px; font-size: 11px; color: var(--muted); cursor: pointer; transition: all .18s; user-select: none; }
+  .tag:hover { border-color: var(--accent2); color: var(--text); }
+  .tag.on { border-color: var(--accent); color: var(--accent); background: var(--glow); }
+
+  .count-row { display: flex; gap: 5px; }
+  .cnt { flex:1; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; color: var(--muted); font-size: 12px; padding: 5px 2px; cursor: pointer; text-align: center; transition: all .18s; font-family: inherit; }
+  .cnt.on { border-color: var(--accent); color: var(--accent); background: var(--glow); }
+
+  .apply-row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .apply { background: var(--surface2); border: 1.5px solid var(--border); border-radius: 7px; padding: 7px 6px; font-size: 11px; color: var(--muted); cursor: pointer; text-align: center; transition: all .18s; font-family: inherit; line-height: 1.5; }
+  .apply:hover { border-color: var(--accent2); color: var(--text); }
+  .apply.on { border-color: var(--accent); color: var(--accent); background: var(--glow); }
+
+  .img-mode-row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .imc { border: 1.5px solid var(--border); border-radius: 8px; padding: 9px 7px 8px; cursor: pointer; transition: all .18s; display: flex; flex-direction: column; align-items: center; gap: 3px; text-align: center; }
+  .imc:hover { border-color: var(--accent2); }
+  .imc.on { border-color: var(--accent); background: var(--glow); }
+  .imc-icon { font-size: 17px; }
+  .imc-name { font-size: 11px; font-weight: 600; color: var(--text); }
+  .imc-desc { font-size: 9px; color: var(--muted); }
+
+  .dalle-box { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 11px; display: none; flex-direction: column; gap: 6px; }
+  .dalle-box.show { display: flex; }
+  .hint { font-size: 10px; color: var(--muted); line-height: 1.5; }
+  .hint a { color: var(--accent); }
+
+  .btn-gen { background: linear-gradient(135deg,var(--ig2),var(--ig3)); border: none; border-radius: 9px; color: #fff; font-size: 13px; font-weight: 600; padding: 12px; cursor: pointer; letter-spacing: .02em; transition: opacity .2s,transform .15s; font-family: inherit; width: 100%; margin-top: 2px; }
+  .btn-gen:hover:not(:disabled) { opacity: .9; transform: translateY(-1px); }
+  .btn-gen:disabled { opacity: .4; cursor: not-allowed; }
+
+  .status { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 9px 11px; font-size: 12px; color: var(--muted); display: none; align-items: center; gap: 8px; }
+  .status.show { display: flex; }
+  .spinner { width: 13px; height: 13px; border-radius: 50%; border: 2px solid var(--border); border-top-color: var(--accent); animation: spin .7s linear infinite; flex-shrink: 0; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .right { display: flex; flex-direction: column; overflow: hidden; }
+  .tabs { display: flex; border-bottom: 1px solid var(--border); padding: 0 18px; flex-shrink: 0; }
+  .tab { background: none; border: none; padding: 12px 13px 10px; font-size: 13px; font-weight: 500; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; transition: all .18s; margin-bottom: -1px; font-family: inherit; }
+  .tab.on { color: var(--accent); border-bottom-color: var(--accent); }
+  .pane { flex:1; overflow-y: auto; padding: 20px; }
+
+  .empty { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; color: var(--dim); text-align: center; }
+  .empty-ico { font-size: 32px; opacity: .3; }
+  .empty p { font-size: 13px; line-height: 1.6; max-width: 200px; }
+
+  .carousel-wrap { display: flex; flex-direction: column; gap: 14px; align-items: center; }
+  .ig-mock { width: 360px; background: var(--surface); border-radius: 18px; border: 1px solid var(--border); overflow: hidden; }
+  .ig-bar { display: flex; align-items: center; gap: 9px; padding: 10px 12px; border-bottom: 1px solid var(--border); }
+  .ig-av { width: 28px; height: 28px; border-radius: 50%; background: linear-gradient(135deg,var(--ig1),var(--ig2)); display: flex; align-items: center; justify-content: center; font-size: 11px; color: #fff; font-weight: 700; }
+  .ig-handle { font-size: 12px; font-weight: 600; }
+  .ig-more { margin-left: auto; color: var(--muted); font-size: 16px; }
+
+  .viewer { position: relative; width: 360px; height: 360px; overflow: hidden; background: #111; }
+  .track { display: flex; width: 100%; height: 100%; transition: transform .38s cubic-bezier(.4,0,.2,1); }
+
+  .slide { flex-shrink: 0; width: 360px; height: 360px; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+  .slide-bg-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; z-index: 0; }
+  .slide-bg-fallback { position: absolute; inset: 0; background: linear-gradient(135deg,#1a1a2e,#0d0d1a); z-index: 0; }
+  .slide-ov { position: absolute; inset: 0; z-index: 1; }
+  .slide-ct { position: relative; z-index: 2; padding: 26px 28px; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+  .slide-num { position: absolute; top: 11px; right: 12px; font-size: 10px; opacity: .6; z-index: 3; }
+  .slide-retry { position: absolute; bottom: 10px; right: 10px; background: rgba(0,0,0,.6); border: 1px solid rgba(255,255,255,.2); border-radius: 6px; color: #fff; font-size: 10px; padding: 4px 8px; cursor: pointer; z-index: 4; font-family: inherit; display: none; }
+  .slide:hover .slide-retry { display: block; }
+
+  .s-emoji { font-size: 30px; margin-bottom: 8px; }
+  .s-tag { font-size: 10px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; margin-bottom: 6px; opacity: .8; }
+  .s-ctitle { font-size: 21px; font-weight: 800; line-height: 1.25; }
+  .s-csub { font-size: 13px; margin-top: 8px; opacity: .75; line-height: 1.5; }
+  .s-accent { width: 30px; height: 3px; border-radius: 2px; margin: 10px auto 0; }
+  .s-title { font-size: 18px; font-weight: 700; line-height: 1.3; }
+  .s-body { font-size: 13px; line-height: 1.65; margin-top: 9px; opacity: .85; }
+
+  .arrow { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,.45); border: none; border-radius: 50%; width: 28px; height: 28px; color: #fff; font-size: 14px; cursor: pointer; display: none; align-items: center; justify-content: center; z-index: 10; }
+  .arrow:hover { background: rgba(0,0,0,.75); }
+  .arrow.l { left: 8px; } .arrow.r { right: 8px; }
+  .viewer:hover .arrow { display: flex; }
+  .arrow.hide { display: none !important; }
+
+  .dots { display: flex; gap: 5px; justify-content: center; padding: 7px 0 4px; }
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--border); transition: all .2s; cursor: pointer; }
+  .dot.on { background: var(--accent); width: 16px; border-radius: 3px; }
+
+  .ig-acts { display: flex; gap: 12px; padding: 8px 12px 4px; }
+  .ig-acts span { font-size: 18px; cursor: pointer; opacity: .7; }
+  .ig-acts span:last-child { margin-left: auto; }
+  .ig-cap { padding: 2px 12px 10px; font-size: 12px; color: var(--muted); }
+
+  .regen-bar { width: 360px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 7px; }
+  .regen-row { display: flex; gap: 6px; align-items: center; }
+  .regen-lbl { font-size: 11px; color: var(--muted); white-space: nowrap; }
+  .regen-input { flex:1; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 11px; padding: 5px 8px; outline: none; font-family: inherit; }
+  .regen-input:focus { border-color: var(--accent2); }
+  .btn-regen { background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; color: var(--muted); font-size: 11px; padding: 5px 9px; cursor: pointer; white-space: nowrap; font-family: inherit; transition: all .18s; }
+  .btn-regen:hover { border-color: var(--accent2); color: var(--accent); }
+  .btn-regen.dalle { border-color: rgba(16,163,127,.4); color: #10a37f; }
+  .btn-regen.dalle:hover { background: rgba(16,163,127,.1); }
+
+  .scripts { display: flex; flex-direction: column; gap: 12px; }
+  .sc { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  .sc-hd { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: var(--surface2); border-bottom: 1px solid var(--border); }
+  .sc-badge { background: var(--glow); border: 1px solid var(--accent2); border-radius: 4px; padding: 2px 7px; font-size: 10px; color: var(--accent); font-weight: 600; }
+  .sc-ttl { font-size: 11px; font-weight: 600; color: var(--muted); }
+  .sc-body { padding: 10px 12px; font-size: 13px; line-height: 1.7; }
+  .sc-acts { display: flex; gap: 6px; padding: 7px 12px 10px; border-top: 1px solid var(--border); }
+  .btn-cp { background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; color: var(--muted); font-size: 11px; padding: 4px 10px; cursor: pointer; transition: all .18s; font-family: inherit; }
+  .btn-cp:hover { border-color: var(--accent2); color: var(--accent); }
+  .btn-cp.ok { color: #5cb85c; border-color: #5cb85c; }
+  .copy-all-row { display: flex; justify-content: flex-end; margin-bottom: 9px; }
+  .btn-ca { background: var(--surface2); border: 1px solid var(--border); border-radius: 7px; color: var(--muted); font-size: 11px; padding: 6px 13px; cursor: pointer; transition: all .18s; font-family: inherit; }
+  .btn-ca:hover { border-color: var(--accent2); color: var(--accent); }
+
+  .tc { display: none; } .tc.on { display: block; }
+  ::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">📸</div>
+  <h1>輪播貼文生成器</h1>
+  <small>Instagram Carousel · AI Powered</small>
+</header>
+
+<!-- API Key Banner -->
+<div class="key-banner">
+  <label>Anthropic API Key</label>
+  <input type="password" id="anthropicKey" placeholder="sk-ant-…" autocomplete="off" />
+  <span class="key-hint">沒有 Key？<a href="https://console.anthropic.com/keys" target="_blank">前往申請 →</a></span>
+</div>
+
+<div class="workspace">
+  <div class="left">
+
+    <div class="grp">
+      <div class="lbl">主題 / 素材</div>
+      <textarea id="topicInput" placeholder="輸入主題方向或貼上素材文字…&#10;例：肝的隱形殺手"></textarea>
+    </div>
+
+    <div class="divider">或貼上網址</div>
+
+    <div class="grp">
+      <div class="lbl">網址來源</div>
+      <div class="url-row">
+        <input type="text" id="urlInput" placeholder="https://…" />
+        <button class="btn-s" id="urlBtn" onclick="addUrl()">讀取</button>
+      </div>
+      <div id="urlList"></div>
+    </div>
+
+    <div class="grp">
+      <div class="lbl">目標受眾（TA）</div>
+      <div class="tags">
+        <div class="tag" data-ta="媽媽族" onclick="toggleTA(this)">👩‍👧 媽媽族</div>
+        <div class="tag" data-ta="上班族" onclick="toggleTA(this)">💼 上班族</div>
+        <div class="tag" data-ta="學生" onclick="toggleTA(this)">📚 學生</div>
+        <div class="tag" data-ta="減重族" onclick="toggleTA(this)">🏃 減重族</div>
+        <div class="tag" data-ta="熟齡女性" onclick="toggleTA(this)">👩 熟齡女性</div>
+        <div class="tag" data-ta="健身愛好者" onclick="toggleTA(this)">💪 健身愛好者</div>
+        <div class="tag" data-ta="小資族" onclick="toggleTA(this)">💰 小資族</div>
+        <div class="tag" data-ta="創業者" onclick="toggleTA(this)">🚀 創業者</div>
+      </div>
+      <input type="text" id="taCustom" placeholder="更細的描述，例：30歲媽媽，關注孩子健康飲食…" />
+    </div>
+
+    <div class="grp">
+      <div class="lbl">背景圖片來源</div>
+      <div class="img-mode-row">
+        <div class="imc on" data-m="unsplash" onclick="selImgMode('unsplash')">
+          <div class="imc-icon">🔍</div>
+          <div class="imc-name">Unsplash 搜圖</div>
+          <div class="imc-desc">免費 · AI 自動配關鍵字</div>
+        </div>
+        <div class="imc" data-m="dalle" onclick="selImgMode('dalle')">
+          <div class="imc-icon">✨</div>
+          <div class="imc-name">DALL-E 生成</div>
+          <div class="imc-desc">客製化 · 需 OpenAI Key</div>
+        </div>
+      </div>
+      <div class="dalle-box" id="dalleBox">
+        <div class="hint">輸入 OpenAI API Key</div>
+        <input type="password" id="openaiKey" placeholder="sk-…" autocomplete="off"/>
+        <div class="hint"><a href="https://platform.openai.com/api-keys" target="_blank">前往 OpenAI 申請 →</a></div>
+      </div>
+    </div>
+
+    <div class="grp">
+      <div class="lbl">圖片套用方式</div>
+      <div class="apply-row">
+        <button class="apply on" onclick="selApply('shared',this)">🖼️ 整組共用一張<br><span style="font-size:9px;opacity:.6">風格統一・省資源</span></button>
+        <button class="apply" onclick="selApply('per',this)">🎨 每張獨立圖片<br><span style="font-size:9px;opacity:.6">更精準・稍慢</span></button>
+      </div>
+    </div>
+
+    <div class="grp">
+      <div class="lbl">張數</div>
+      <div class="count-row">
+        <button class="cnt" onclick="selCount(this)">4</button>
+        <button class="cnt on" onclick="selCount(this)">5</button>
+        <button class="cnt" onclick="selCount(this)">6</button>
+        <button class="cnt" onclick="selCount(this)">7</button>
+        <button class="cnt" onclick="selCount(this)">8</button>
+        <button class="cnt" onclick="selCount(this)">10</button>
+      </div>
+    </div>
+
+    <button class="btn-gen" id="genBtn" onclick="generate()">✦ 生成輪播貼文</button>
+    <div class="status" id="status"><div class="spinner"></div><span id="stTxt">生成中…</span></div>
+
+  </div>
+
+  <div class="right">
+    <div class="tabs">
+      <button class="tab on" onclick="selTab('preview',this)">📱 輪播預覽</button>
+      <button class="tab" onclick="selTab('script',this)">📝 逐張文字稿</button>
+    </div>
+    <div class="pane">
+      <div id="tc-preview" class="tc on">
+        <div id="emptyPrev" class="empty"><div class="empty-ico">🎠</div><p>設定主題與 TA<br>AI 自動配圖並生成輪播</p></div>
+        <div id="carouselArea" class="carousel-wrap" style="display:none"></div>
+      </div>
+      <div id="tc-script" class="tc">
+        <div id="emptyScript" class="empty"><div class="empty-ico">📄</div><p>生成後顯示逐張文字稿與完整 Caption</p></div>
+        <div id="scriptArea" style="display:none"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── State ──
+let slideCount = 5, imgMode = 'unsplash', applyMode = 'shared';
+let selectedTAs = [], fetchedUrls = [], curSlide = 0, slidesData = [], bgData = {};
+let imgUrls = [];
+
+function getAnthropicKey() {
+  return document.getElementById('anthropicKey').value.trim();
+}
+
+// ── UI ──
+function selCount(el) {
+  slideCount = +el.textContent;
+  document.querySelectorAll('.cnt').forEach(b => b.classList.toggle('on', b === el));
+}
+function selImgMode(m) {
+  imgMode = m;
+  document.querySelectorAll('.imc').forEach(c => c.classList.toggle('on', c.dataset.m === m));
+  document.getElementById('dalleBox').classList.toggle('show', m === 'dalle');
+}
+function selApply(m, el) {
+  applyMode = m;
+  document.querySelectorAll('.apply').forEach(b => b.classList.remove('on'));
+  el.classList.add('on');
+}
+function toggleTA(el) {
+  el.classList.toggle('on');
+  selectedTAs = [...document.querySelectorAll('.tag.on')].map(e => e.dataset.ta);
+}
+function selTab(name, btn) {
+  document.querySelectorAll('.tab').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+  document.querySelectorAll('.tc').forEach(c => c.classList.remove('on'));
+  document.getElementById('tc-'+name).classList.add('on');
+}
+
+// ── Anthropic API call ──
+async function callClaude(userPrompt, system) {
+  const key = getAnthropicKey();
+  if (!key) throw new Error('請先輸入 Anthropic API Key！');
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': key,
+      'anthropic-version': '2023-06-01'
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 4096,
+      system: system || '',
+      messages: [{ role: 'user', content: userPrompt }]
+    })
+  });
+  const data = await res.json();
+  if (data.error) throw new Error('API 錯誤：' + data.error.message);
+  return data.content.filter(b => b.type === 'text').map(b => b.text).join('');
+}
+
+// ── URL scrape ──
+async function addUrl() {
+  const input = document.getElementById('urlInput');
+  const url = input.value.trim();
+  if (!url || !url.startsWith('http')) return;
+  if (!getAnthropicKey()) { alert('請先輸入 Anthropic API Key！'); return; }
+  input.value = '';
+  const btn = document.getElementById('urlBtn');
+  btn.disabled = true; btn.textContent = '讀取中…';
+  const entry = { url, content: '', status: 'spin' };
+  fetchedUrls.push(entry); renderUrlList();
+  try {
+    const text = await callClaude(
+      `請摘要此網頁的主要內容（繁體中文，400字以內）：${url}`,
+      '你是網頁摘要助手，請簡潔摘要網頁重點內容。'
+    );
+    entry.content = text.trim() || '（已讀取）';
+    entry.status = 'ok';
+  } catch(e) {
+    entry.content = '';
+    entry.status = 'err';
+  }
+  btn.disabled = false; btn.textContent = '讀取';
+  renderUrlList();
+}
+function removeUrl(i) { fetchedUrls.splice(i, 1); renderUrlList(); }
+function renderUrlList() {
+  document.getElementById('urlList').innerHTML = fetchedUrls.map((u,i) => `
+    <div class="chip">
+      <span class="ct" title="${u.url}">${u.url}</span>
+      <span class="chip-st ${u.status}">${u.status==='ok'?'✓ 已讀取':u.status==='spin'?'讀取中':'失敗'}</span>
+      <button class="chip-rm" onclick="removeUrl(${i})">×</button>
+    </div>`).join('');
+}
+
+// ── Main Generate ──
+async function generate() {
+  const topic = document.getElementById('topicInput').value.trim();
+  const urlTxt = fetchedUrls.filter(u=>u.status==='ok').map(u=>`[來源：${u.url}]\n${u.content}`).join('\n\n');
+  const custom = document.getElementById('taCustom').value.trim();
+  const taDesc = [...selectedTAs, ...(custom?[custom]:[])].join('、');
+  if (!topic && !urlTxt) { alert('請輸入主題或讀取至少一個網址！'); return; }
+  if (!getAnthropicKey()) { alert('請先輸入 Anthropic API Key！'); return; }
+  if (imgMode==='dalle' && !document.getElementById('openaiKey').value.trim()) {
+    alert('請輸入 OpenAI API Key！'); return;
+  }
+
+  const btn = document.getElementById('genBtn');
+  const st = document.getElementById('status');
+  const stTxt = document.getElementById('stTxt');
+  btn.disabled = true; st.classList.add('show');
+
+  try {
+    stTxt.textContent = 'AI 規劃輪播內容…';
+    const prompt = buildPrompt(topic, urlTxt, taDesc, slideCount, applyMode);
+    const raw = await callClaude(prompt, '你是專業的 Instagram 輪播貼文策劃師。只回傳合法 JSON，不含其他文字或 markdown 符號。');
+    const j0 = raw.indexOf('{'), j1 = raw.lastIndexOf('}');
+    if (j0 < 0 || j1 < 0) throw new Error('AI 回傳格式異常，請重試');
+    const parsed = JSON.parse(raw.slice(j0, j1+1));
+    if (!parsed.slides?.length) throw new Error('slides 資料有誤，請重試');
+
+    slidesData = parsed.slides;
+    bgData = parsed.bg || {};
+
+    stTxt.textContent = imgMode==='dalle' ? 'DALL-E 生成圖片…' : '搜尋背景圖片…';
+    imgUrls = await fetchImages(parsed, taDesc);
+
+    renderCarousel(slidesData, bgData, imgUrls);
+    renderScript(slidesData, parsed.caption);
+    document.getElementById('emptyPrev').style.display = 'none';
+    document.getElementById('carouselArea').style.display = 'flex';
+    document.getElementById('emptyScript').style.display = 'none';
+    document.getElementById('scriptArea').style.display = 'block';
+
+  } catch(e) {
+    console.error(e);
+    stTxt.textContent = '⚠ ' + (e.message || '生成失敗，請重試');
+    setTimeout(() => st.classList.remove('show'), 5000);
+  } finally {
+    btn.disabled = false;
+    setTimeout(() => st.classList.remove('show'), 800);
+  }
+}
+
+function buildPrompt(topic, urlTxt, taDesc, count, apply) {
+  const isPer = apply === 'per';
+  const contentCount = count - 2;
+  const slidesExample = [
+    `{"type":"cover","tag":"標籤","title":"封面主標","subtitle":"副標","emoji":"emoji"}`,
+    ...Array.from({length: contentCount}, (_,i) =>
+      `{"type":"content","tag":"重點${i+1}","title":"核心標題","body":"2-3行說明，口語親切","emoji":"emoji"}`
+    ),
+    `{"type":"cta","tag":"行動","title":"CTA標題","body":"呼籲互動文字","emoji":"emoji"}`
+  ].join(',\n    ');
+
+  return `請根據以下資訊，生成 Instagram 輪播貼文（共 ${count} 張）。
+
+${topic ? `主題：${topic}` : ''}${urlTxt ? `\n\n參考內容：\n${urlTxt}` : ''}
+${taDesc ? `\n目標受眾（TA）：${taDesc}` : ''}
+
+背景圖片規劃（Unsplash 搜尋關鍵字，英文）：
+${isPer ? `- 每張各給一個關鍵字（依內容主題）` : `- 整組共用一個關鍵字`}
+- 要讓 TA 一眼產生共鳴，例：媽媽族→"mother child family"，減重族→"healthy fitness lifestyle"
+
+只回傳 JSON：
+{
+  "bg": {
+    "text_color": "#ffffff",
+    "accent_color": "#hexcolor",
+    "overlay": 0.45,
+    ${isPer
+      ? `"keywords_per_slide": ["kw1","kw2"...共${count}個]`
+      : `"shared_keyword": "english keyword"`
+    }
+  },
+  "slides": [
+    ${slidesExample}
+  ],
+  "caption": "完整IG說明欄（含hashtags，繁體中文）"
+}
+
+注意：slides 陣列必須剛好 ${count} 個，第1個 cover，最後1個 cta，中間全部 content。`;
+}
+
+// ── Image fetching ──
+async function fetchImages(parsed, taDesc) {
+  const bg = parsed.bg || {};
+  const n = parsed.slides.length;
+  const isPer = applyMode === 'per';
+
+  if (imgMode === 'unsplash') {
+    if (isPer) {
+      const kws = bg.keywords_per_slide || Array(n).fill(bg.shared_keyword || 'lifestyle');
+      return kws.map(kw => unsplashUrl(kw));
+    } else {
+      const url = unsplashUrl(bg.shared_keyword || 'lifestyle');
+      return Array(n).fill(url);
+    }
+  } else {
+    const key = document.getElementById('openaiKey').value.trim();
+    if (isPer) {
+      const kws = bg.keywords_per_slide || Array(n).fill(bg.shared_keyword || 'lifestyle');
+      const results = [];
+      for (const kw of kws) results.push(await dalleGen(kw, taDesc, key));
+      return results;
+    } else {
+      const url = await dalleGen(bg.shared_keyword || 'lifestyle', taDesc, key);
+      return Array(n).fill(url);
+    }
+  }
+}
+
+function unsplashUrl(kw) {
+  const sig = Math.floor(Math.random() * 9999);
+  return `https://source.unsplash.com/720x720/?${encodeURIComponent(kw.trim())}&sig=${sig}`;
+}
+
+async function dalleGen(kw, taDesc, key) {
+  try {
+    const prompt = `Atmospheric background photo for Instagram: ${kw}. ${taDesc ? `Audience: ${taDesc}.` : ''} High quality, cinematic, no text, square format, dark vignette edges.`;
+    const r = await fetch('https://api.openai.com/v1/images/generations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+      body: JSON.stringify({ model: 'dall-e-3', prompt, n: 1, size: '1024x1024', quality: 'standard' })
+    });
+    const d = await r.json();
+    if (d.error) throw new Error(d.error.message);
+    return d.data[0].url;
+  } catch(e) { console.error('DALL-E:', e); return null; }
+}
+
+// ── Render Carousel ──
+function renderCarousel(slides, bg, urls) {
+  curSlide = 0;
+  const total = slides.length;
+  const tc = bg.text_color || '#fff';
+  const ac = bg.accent_color || '#fff';
+  const ov = bg.overlay || 0.45;
+
+  const slidesHtml = slides.map((s, i) => {
+    const url = urls[i];
+    let inner = '';
+    if (s.type === 'cover') {
+      inner = `<div class="s-emoji">${s.emoji||'✨'}</div>
+        <div class="s-tag" style="color:${ac}">${s.tag||''}</div>
+        <div class="s-ctitle" style="color:${tc}">${s.title||''}</div>
+        <div class="s-csub" style="color:${tc}">${s.subtitle||''}</div>
+        <div class="s-accent" style="background:${ac}"></div>`;
+    } else if (s.type === 'cta') {
+      inner = `<div class="s-emoji">${s.emoji||'👇'}</div>
+        <div class="s-tag" style="color:${ac}">${s.tag||'行動'}</div>
+        <div class="s-ctitle" style="color:${tc}">${s.title||''}</div>
+        <div class="s-csub" style="color:${tc}">${s.body||''}</div>
+        <div class="s-accent" style="background:${ac}"></div>`;
+    } else {
+      inner = `<div class="s-emoji">${s.emoji||''}</div>
+        <div class="s-tag" style="color:${ac}">${s.tag||''}</div>
+        <div class="s-title" style="color:${tc}">${s.title||''}</div>
+        <div class="s-body" style="color:${tc}">${s.body||''}</div>`;
+    }
+    const imgHtml = url
+      ? `<img id="bg${i}" class="slide-bg-img" src="${url}" alt="" />`
+      : `<div id="bg${i}" class="slide-bg-fallback"></div>`;
+    return `<div class="slide" id="sl${i}">
+      ${imgHtml}
+      <div class="slide-ov" style="background:rgba(0,0,0,${ov})"></div>
+      <div class="slide-ct">${inner}</div>
+      <span class="slide-num" style="color:${tc}">${i+1}/${total}</span>
+      <button class="slide-retry" onclick="regenImg(${i})">🔄 換圖</button>
+    </div>`;
+  }).join('');
+
+  const dotsHtml = slides.map((_,i) =>
+    `<div class="dot ${i===0?'on':''}" onclick="goSlide(${i})"></div>`).join('');
+
+  document.getElementById('carouselArea').innerHTML = `
+    <div class="ig-mock">
+      <div class="ig-bar">
+        <div class="ig-av">蜂</div>
+        <div><div class="ig-handle">beehive.tw</div></div>
+        <div class="ig-more">⋯</div>
+      </div>
+      <div class="viewer" id="viewer">
+        <div class="track" id="track">${slidesHtml}</div>
+        <button class="arrow l hide" id="arL" onclick="goSlide(curSlide-1)">‹</button>
+        <button class="arrow r" id="arR" onclick="goSlide(curSlide+1)">›</button>
+      </div>
+      <div class="dots" id="dots">${dotsHtml}</div>
+      <div class="ig-acts"><span>🤍</span><span>💬</span><span>📤</span><span>🔖</span></div>
+      <div class="ig-cap"><b>beehive.tw</b> 滑動看全部重點 →</div>
+    </div>
+    <div class="regen-bar">
+      <div style="font-size:11px;color:var(--muted)">換掉目前這張背景圖</div>
+      <div class="regen-row">
+        <span class="regen-lbl">關鍵字</span>
+        <input class="regen-input" id="regenKw" placeholder="英文關鍵字…"/>
+        <button class="btn-regen" onclick="regenCurrent('unsplash')">Unsplash</button>
+        <button class="btn-regen dalle" onclick="regenCurrent('dalle')">DALL-E</button>
+      </div>
+    </div>`;
+}
+
+function goSlide(n) {
+  const total = slidesData.length;
+  curSlide = Math.max(0, Math.min(n, total-1));
+  const track = document.getElementById('track');
+  if (track) track.style.transform = `translateX(-${curSlide*360}px)`;
+  document.querySelectorAll('.dot').forEach((d,i) => d.classList.toggle('on', i===curSlide));
+  document.getElementById('arL')?.classList.toggle('hide', curSlide===0);
+  document.getElementById('arR')?.classList.toggle('hide', curSlide===total-1);
+}
+
+async function regenCurrent(mode) {
+  const kw = document.getElementById('regenKw').value.trim();
+  if (!kw) { alert('請輸入關鍵字！'); return; }
+  await regenImg(curSlide, kw, mode);
+}
+
+async function regenImg(idx, kw, mode) {
+  const keyword = kw || (bgData.keywords_per_slide?.[idx] || bgData.shared_keyword || 'lifestyle');
+  const useMode = mode || imgMode;
+  const bgEl = document.getElementById('bg'+idx);
+  if (bgEl?.tagName === 'IMG') bgEl.style.opacity = '0.3';
+
+  let newUrl = null;
+  if (useMode === 'dalle') {
+    const key = document.getElementById('openaiKey').value.trim();
+    if (!key) { alert('請先輸入 OpenAI Key！'); return; }
+    const taDesc = [...selectedTAs, document.getElementById('taCustom').value.trim()].filter(Boolean).join('、');
+    newUrl = await dalleGen(keyword, taDesc, key);
+  } else {
+    newUrl = unsplashUrl(keyword);
+  }
+
+  if (newUrl) {
+    const el = document.getElementById('bg'+idx);
+    if (el?.tagName === 'IMG') {
+      el.src = newUrl;
+      el.style.opacity = '1';
+    }
+    imgUrls[idx] = newUrl;
+  }
+}
+
+// ── Render Script ──
+function renderScript(slides, caption) {
+  const all = slides.map((s,i) => `【第${i+1}張】${s.title||''}\n${s.body||s.subtitle||''}`).join('\n\n');
+  const cards = slides.map((s,i) => {
+    const txt = [s.title, s.body||s.subtitle||''].filter(Boolean).join('\n');
+    const lbl = s.type==='cover'?'封面':s.type==='cta'?'CTA':`重點 ${i}`;
+    return `<div class="sc">
+      <div class="sc-hd"><span class="sc-badge">第${i+1}張</span><span class="sc-ttl">${lbl}</span></div>
+      <div class="sc-body">${s.emoji?s.emoji+' ':''}<b>${s.title||''}</b>${(s.body||s.subtitle)?'<br><br>'+(s.body||s.subtitle):''}</div>
+      <div class="sc-acts"><button class="btn-cp" onclick="cp(this,\`${esc(txt)}\`)">複製這張</button></div>
+    </div>`;
+  }).join('');
+  const capCard = caption ? `<div class="sc">
+    <div class="sc-hd"><span class="sc-badge" style="background:rgba(245,133,41,.15);border-color:#f58529;color:#f58529;">說明欄</span><span class="sc-ttl">IG Caption + Hashtags</span></div>
+    <div class="sc-body" style="white-space:pre-wrap">${caption}</div>
+    <div class="sc-acts"><button class="btn-cp" onclick="cp(this,\`${esc(caption)}\`)">複製說明欄</button></div>
+  </div>` : '';
+  const fullTxt = all + (caption ? '\n\n【Caption】\n'+caption : '');
+  document.getElementById('scriptArea').innerHTML = `
+    <div class="copy-all-row"><button class="btn-ca" onclick="cp(this,\`${esc(fullTxt)}\`)">複製全部文字稿</button></div>
+    <div class="scripts">${cards}${capCard}</div>`;
+}
+
+function esc(s) { return (s||'').replace(/\\/g,'\\\\').replace(/`/g,'\\`').replace(/\$/g,'\\$'); }
+function cp(btn, txt) {
+  navigator.clipboard.writeText(txt).then(() => {
+    const orig = btn.textContent;
+    btn.textContent = '✓ 已複製'; btn.classList.add('ok');
+    setTimeout(() => { btn.textContent = orig; btn.classList.remove('ok'); }, 1800);
+  });
+}
+document.addEventListener('keydown', e => {
+  if (!slidesData.length) return;
+  if (e.key==='ArrowRight') goSlide(curSlide+1);
+  if (e.key==='ArrowLeft') goSlide(curSlide-1);
+});
+</script>
+</body>
+</html>
