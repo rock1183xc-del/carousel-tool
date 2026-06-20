@@ -234,14 +234,12 @@
         </div>
         <div class="imc" data-m="dalle" onclick="selImgMode('dalle')">
           <div class="imc-icon">✨</div>
-          <div class="imc-name">DALL-E 生成</div>
-          <div class="imc-desc">客製化 · 需 OpenAI Key</div>
+          <div class="imc-name">Gemini 生成</div>
+          <div class="imc-desc">客製化 · 使用 Gemini Key</div>
         </div>
       </div>
       <div class="dalle-box" id="dalleBox">
-        <div class="hint">輸入 OpenAI API Key</div>
-        <input type="password" id="openaiKey" placeholder="sk-…" autocomplete="off"/>
-        <div class="hint"><a href="https://platform.openai.com/api-keys" target="_blank">前往 OpenAI 申請 →</a></div>
+        <div class="hint">使用頂部輸入的 Gemini Key 生成圖片，稍慢但更貼合主題。</div>
       </div>
     </div>
 
@@ -388,9 +386,7 @@ async function generate() {
   const taDesc = [...selectedTAs, ...(custom?[custom]:[])].join('、');
   if (!topic && !urlTxt) { alert('請輸入主題或讀取至少一個網址！'); return; }
   if (!getGeminiKey()) { alert('請先輸入 Gemini API Key！'); return; }
-  if (imgMode==='dalle' && !document.getElementById('openaiKey').value.trim()) {
-    alert('請輸入 OpenAI API Key！'); return;
-  }
+  // Gemini key already validated above
 
   const btn = document.getElementById('genBtn');
   const st = document.getElementById('status');
@@ -499,21 +495,21 @@ async function fetchImages(parsed, taDesc) {
 
 function unsplashUrl(kw) {
   const sig = Math.floor(Math.random() * 9999);
-  return `https://loremflickr.com/720/720/${encodeURIComponent(kw.trim())}?lock=${sig}`;
+  return `https://picsum.photos/seed/${encodeURIComponent(kw.trim().replace(/\s+/g,'-'))}-${sig}/720/720`;
 }
 
 async function dalleGen(kw, taDesc, key) {
   try {
-    const prompt = `Atmospheric background photo for Instagram: ${kw}. ${taDesc ? `Audience: ${taDesc}.` : ''} High quality, cinematic, no text, square format, dark vignette edges.`;
-    const r = await fetch('https://api.openai.com/v1/images/generations', {
+    const prompt = `Atmospheric background photo for Instagram: ${kw}. ${taDesc ? `Audience: ${taDesc}.` : ''} High quality, cinematic, no text, square format, subtle dark vignette.`;
+    const r = await fetch('/api/image', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-      body: JSON.stringify({ model: 'dall-e-3', prompt, n: 1, size: '1024x1024', quality: 'standard' })
+      headers: { 'Content-Type': 'application/json', 'x-api-key': key },
+      body: JSON.stringify({ prompt })
     });
     const d = await r.json();
-    if (d.error) throw new Error(d.error.message);
-    return d.data[0].url;
-  } catch(e) { console.error('DALL-E:', e); return null; }
+    if (d.error) throw new Error(d.error);
+    return d.dataUrl;
+  } catch(e) { console.error('Gemini Image:', e); return null; }
 }
 
 // ── Render Carousel ──
@@ -611,8 +607,8 @@ async function regenImg(idx, kw, mode) {
 
   let newUrl = null;
   if (useMode === 'dalle') {
-    const key = document.getElementById('openaiKey').value.trim();
-    if (!key) { alert('請先輸入 OpenAI Key！'); return; }
+    const key = getGeminiKey();
+    if (!key) { alert('請先輸入 Gemini Key！'); return; }
     const taDesc = [...selectedTAs, document.getElementById('taCustom').value.trim()].filter(Boolean).join('、');
     newUrl = await dalleGen(keyword, taDesc, key);
   } else {
