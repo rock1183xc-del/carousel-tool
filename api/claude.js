@@ -9,7 +9,8 @@ export default async function handler(req, res) {
   if (!apiKey) return res.status(400).json({ error: { message: 'Missing API key' } });
 
   const { system, messages, max_tokens } = req.body;
-  const userText = messages?.[0]?.content || ''
+  const userText = messages?.[0]?.content || '';
+
   const geminiBody = {
     contents: [{ role: 'user', parts: [{ text: userText }] }],
     generationConfig: { maxOutputTokens: max_tokens || 4096 }
