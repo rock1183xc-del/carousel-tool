@@ -305,6 +305,29 @@ function selImgMode(m) {
   imgMode = m;
   document.querySelectorAll('.imc').forEach(c => c.classList.toggle('on', c.dataset.m === m));
   document.getElementById('dalleBox').classList.toggle('show', m === 'dalle');
+  if (slidesData.length) regenAllImages();
+}
+
+async function regenAllImages() {
+  if (!getGeminiKey()) return;
+  const stTxt = document.getElementById('stTxt');
+  const st = document.getElementById('status');
+  st.classList.add('show');
+  stTxt.textContent = imgMode === 'dalle' ? 'Gemini 生成圖片中…' : '切換圖片中…';
+  const taDesc = [...selectedTAs, document.getElementById('taCustom').value.trim()].filter(Boolean).join('、');
+  const parsed = { slides: slidesData, bg: bgData };
+  imgUrls = await fetchImages(parsed, taDesc);
+  imgUrls.forEach((url, i) => {
+    const el = document.getElementById('bg' + i);
+    if (!el) return;
+    if (url && el.tagName === 'IMG') { el.src = url; }
+    else if (url && el.tagName === 'DIV') {
+      const img = document.createElement('img');
+      img.id = 'bg' + i; img.className = 'slide-bg-img'; img.src = url;
+      el.parentNode.replaceChild(img, el);
+    }
+  });
+  setTimeout(() => st.classList.remove('show'), 600);
 }
 function selApply(m, el) {
   applyMode = m;
@@ -577,8 +600,8 @@ function renderCarousel(slides, bg, urls) {
       <div class="regen-row">
         <span class="regen-lbl">關鍵字</span>
         <input class="regen-input" id="regenKw" placeholder="英文關鍵字…"/>
-        <button class="btn-regen" onclick="regenCurrent('unsplash')">Unsplash</button>
-        <button class="btn-regen dalle" onclick="regenCurrent('dalle')">DALL-E</button>
+        <button class="btn-regen" onclick="regenCurrent('unsplash')">隨機圖</button>
+        <button class="btn-regen dalle" onclick="regenCurrent('dalle')">Gemini AI</button>
       </div>
     </div>`;
 }
