@@ -227,16 +227,21 @@
 
     <div class="grp">
       <div class="lbl">背景圖片來源</div>
-      <div class="img-mode-row">
+      <div class="img-mode-row" style="grid-template-columns:1fr 1fr 1fr">
         <div class="imc on" data-m="unsplash" onclick="selImgMode('unsplash')">
           <div class="imc-icon">🔍</div>
-          <div class="imc-name">Unsplash 搜圖</div>
-          <div class="imc-desc">免費 · AI 自動配關鍵字</div>
+          <div class="imc-name">搜圖</div>
+          <div class="imc-desc">AI 自動配關鍵字</div>
         </div>
         <div class="imc" data-m="dalle" onclick="selImgMode('dalle')">
           <div class="imc-icon">✨</div>
           <div class="imc-name">AI 生圖</div>
-          <div class="imc-desc">免費 · 依主題生成</div>
+          <div class="imc-desc">依主題生成</div>
+        </div>
+        <div class="imc" data-m="none" onclick="selImgMode('none')">
+          <div class="imc-icon">📝</div>
+          <div class="imc-name">純文案</div>
+          <div class="imc-desc">自備圖 · 只要文字</div>
         </div>
       </div>
     </div>
@@ -504,7 +509,7 @@ function buildPrompt(topic, urlTxt, taDesc, count, apply, ctaText) {
 ${topic ? `主題：${topic}` : ''}${urlTxt ? `\n\n參考內容：\n${urlTxt}` : ''}
 ${taDesc ? `\n目標受眾（TA）：${taDesc}` : ''}
 
-背景圖片關鍵字（英文攝影描述，必須讓目標受眾「一眼覺得說的就是我！」）：
+${imgMode !== 'none' ? `背景圖片關鍵字（英文攝影描述，必須讓目標受眾「一眼覺得說的就是我！」）：
 ${isPer ? `- 每張各給一個關鍵字（依該張內容/情境）` : `- 整組共用一個關鍵字（最能代表整體主題的場景）`}
 - ⚠️ 關鍵：不要泛泛的美照或健康宣傳圖，要真實日常情境+具體情緒，讓受眾「感同身受」
 - 格式：具體人物 + 具體動作/情緒 + 打光風格
@@ -515,17 +520,19 @@ ${isPer ? `- 每張各給一個關鍵字（依該張內容/情境）` : `- 整�
   - 飲食習慣→"asian woman looking guilty at greasy takeout food late night"
   - 瘦身停滯→"frustrated woman standing on scale hands on hips disappointed expression"
   - 慢性疲勞→"woman barely awake at work desk coffee in hand dark circles pale"
-${cardStyle === 'light' ? `- 打光風格：bright natural window light, soft warm tones, airy atmosphere` : `- 打光風格：dramatic studio light OR cinematic moody light, high contrast`}
+${cardStyle === 'light' ? `- 打光風格：bright natural window light, soft warm tones, airy atmosphere` : `- 打光風格：dramatic studio light OR cinematic moody light, high contrast`}` : ''}
 
 只回傳 JSON：
 {
   "bg": {
-    "text_color": "#ffffff",
-    "accent_color": "#hexcolor",
-    "overlay": 0.5,
-    ${isPer
-      ? `"keywords_per_slide": ["kw1","kw2"...共${count}個，每個都要具體情境描述]`
-      : `"shared_keyword": "具體情境英文描述"`
+    "text_color": "${imgMode === 'none' ? '#ffffff' : '#ffffff'}",
+    "accent_color": "#hexcolor（依主題選配色）",
+    "overlay": ${imgMode === 'none' ? 0 : 0.5},
+    ${imgMode === 'none'
+      ? `"bg_color": "#深色漸層hex，依主題情感選色（例：深藍、深綠、深紫）"`
+      : isPer
+        ? `"keywords_per_slide": ["kw1","kw2"...共${count}個，每個都要具體情境描述]`
+        : `"shared_keyword": "具體情境英文描述"`
     }
   },
   "slides": [
@@ -543,6 +550,7 @@ ${ctaText ? `- 最後一張 cta 的 body 必須使用這段指定文字（原文
 
 // ── Image fetching ──
 async function fetchImages(parsed, taDesc) {
+  if (imgMode === 'none') return Array(parsed.slides.length).fill(null);
   const bg = parsed.bg || {};
   const n = parsed.slides.length;
   const isPer = applyMode === 'per';
@@ -613,7 +621,9 @@ function renderCarousel(slides, bg, urls) {
   const bodyStyle = isLight
     ? `color:${tc};background:rgba(255,255,255,0.88);padding:8px 12px;border-radius:6px`
     : `color:${tc};opacity:0.88;text-shadow:${shSm}`;
-  const fallbackBg = isLight ? '#f0f0f8' : 'linear-gradient(135deg,#1a1a2e,#0d0d1a)';
+  const fallbackBg = imgMode === 'none'
+    ? (bg.bg_color || (isLight ? '#f0f0f8' : '#1a1a2e'))
+    : (isLight ? '#f0f0f8' : 'linear-gradient(135deg,#1a1a2e,#0d0d1a)');
 
   const slidesHtml = slides.map((s, i) => {
     const url = urls[i];
@@ -683,7 +693,7 @@ function renderCarousel(slides, bg, urls) {
       </div>
       <div class="regen-row">
         <span class="regen-lbl">關鍵字</span>
-        <input class="regen-input" id="regenKw" placeholder="英文關鍵字…"/>
+        <input class="regen-input" id="regenKw" placeholder="關鍵字（中英文皆可）…"/>
         <button class="btn-regen" onclick="regenCurrent('unsplash')">隨機圖</button>
         <button class="btn-regen dalle" onclick="regenCurrent('dalle')">Gemini AI</button>
       </div>
