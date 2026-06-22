@@ -241,6 +241,22 @@
     </div>
 
     <div class="grp">
+      <div class="lbl">卡片風格</div>
+      <div class="img-mode-row">
+        <div class="imc on" data-st="dark" onclick="selCardStyle('dark')">
+          <div class="imc-icon">🌙</div>
+          <div class="imc-name">暗色</div>
+          <div class="imc-desc">戲劇感 · 深色背景</div>
+        </div>
+        <div class="imc" data-st="light" onclick="selCardStyle('light')">
+          <div class="imc-icon">☀️</div>
+          <div class="imc-name">亮色</div>
+          <div class="imc-desc">清爽 · 淺色背景</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grp">
       <div class="lbl">圖片套用方式</div>
       <div class="apply-row">
         <button class="apply on" onclick="selApply('shared',this)">🖼️ 整組共用一張<br><span style="font-size:9px;opacity:.6">風格統一・省資源</span></button>
@@ -285,13 +301,24 @@
 
 <script>
 // ── State ──
-let slideCount = 5, imgMode = 'unsplash', applyMode = 'shared';
+let slideCount = 5, imgMode = 'unsplash', applyMode = 'shared', cardStyle = 'dark';
 let selectedTAs = [], fetchedUrls = [], curSlide = 0, slidesData = [], bgData = {};
 let imgUrls = [];
 
 function getGeminiKey() {
   return document.getElementById('geminiKey').value.trim();
 }
+
+// 自動儲存/載入 API Key
+document.addEventListener('DOMContentLoaded', () => {
+  const saved = localStorage.getItem('geminiKey');
+  if (saved) document.getElementById('geminiKey').value = saved;
+});
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('geminiKey').addEventListener('change', e => {
+    if (e.target.value.trim()) localStorage.setItem('geminiKey', e.target.value.trim());
+  });
+});
 
 // ── UI ──
 function selCount(el) {
@@ -300,9 +327,14 @@ function selCount(el) {
 }
 function selImgMode(m) {
   imgMode = m;
-  document.querySelectorAll('.imc').forEach(c => c.classList.toggle('on', c.dataset.m === m));
-  document.getElementById('dalleBox').classList.toggle('show', m === 'dalle');
+  document.querySelectorAll('[data-m]').forEach(c => c.classList.toggle('on', c.dataset.m === m));
+  document.getElementById('dalleBox')?.classList.toggle('show', m === 'dalle');
   if (slidesData.length) regenAllImages();
+}
+function selCardStyle(s) {
+  cardStyle = s;
+  document.querySelectorAll('[data-st]').forEach(c => c.classList.toggle('on', c.dataset.st === s));
+  if (slidesData.length) renderCarousel(slidesData, bgData, imgUrls);
 }
 
 async function regenAllImages() {
@@ -535,39 +567,62 @@ async function dalleGen(kw, taDesc, key) {
 function renderCarousel(slides, bg, urls) {
   curSlide = 0;
   const total = slides.length;
-  const tc = bg.text_color || '#fff';
-  const ac = bg.accent_color || '#fff';
+  const isLight = cardStyle === 'light';
+
+  const tc = isLight ? '#1a1a1a' : (bg.text_color || '#fff');
+  const ac = bg.accent_color || (isLight ? '#7c3aed' : '#fff');
   const ov = bg.overlay || 0.45;
+
+  const overlayGrad = isLight
+    ? `linear-gradient(to top,rgba(255,255,255,0.92) 0%,rgba(255,255,255,${(ov*0.7).toFixed(2)}) 50%,rgba(255,255,255,0.05) 100%)`
+    : `linear-gradient(to top,rgba(0,0,0,0.82) 0%,rgba(0,0,0,${(ov*0.6).toFixed(2)}) 55%,rgba(0,0,0,0.2) 100%)`;
+
+  const tagStyle = isLight
+    ? `color:${ac};background:rgba(255,255,255,0.92);box-shadow:0 1px 6px rgba(0,0,0,0.12)`
+    : `color:${ac};background:rgba(0,0,0,0.55)`;
+  const cTitleStyle = isLight
+    ? `color:${tc};text-shadow:0 1px 4px rgba(255,255,255,0.8)`
+    : `color:${tc};text-shadow:0 2px 14px rgba(0,0,0,1),0 0 30px rgba(0,0,0,0.9)`;
+  const cSubStyle = isLight
+    ? `color:${tc};background:rgba(255,255,255,0.88);text-shadow:none;box-shadow:0 2px 8px rgba(0,0,0,0.08)`
+    : `color:${tc};background:rgba(0,0,0,0.4);text-shadow:0 1px 8px rgba(0,0,0,1)`;
+  const titleStyle = isLight
+    ? `color:${tc};text-shadow:0 1px 3px rgba(255,255,255,0.8)`
+    : `color:${tc};text-shadow:0 2px 12px rgba(0,0,0,1),0 0 25px rgba(0,0,0,0.9)`;
+  const bodyStyle = isLight
+    ? `color:${tc};background:rgba(255,255,255,0.88);text-shadow:none;box-shadow:0 2px 8px rgba(0,0,0,0.08)`
+    : `color:${tc};background:rgba(0,0,0,0.45);text-shadow:0 1px 6px rgba(0,0,0,0.9)`;
+  const fallbackBg = isLight ? '#f0f0f8' : 'linear-gradient(135deg,#1a1a2e,#0d0d1a)';
 
   const slidesHtml = slides.map((s, i) => {
     const url = urls[i];
     let inner = '';
     if (s.type === 'cover') {
       inner = `<div class="s-emoji">${s.emoji||'✨'}</div>
-        <div class="s-tag" style="color:${ac}">${s.tag||''}</div>
-        <div class="s-ctitle" style="color:${tc}">${s.title||''}</div>
-        <div class="s-csub" style="color:${tc}">${s.subtitle||''}</div>
+        <div class="s-tag" style="${tagStyle}">${s.tag||''}</div>
+        <div class="s-ctitle" style="${cTitleStyle}">${s.title||''}</div>
+        <div class="s-csub" style="${cSubStyle}">${s.subtitle||''}</div>
         <div class="s-accent" style="background:${ac}"></div>`;
     } else if (s.type === 'cta') {
       inner = `<div class="s-emoji">${s.emoji||'👇'}</div>
-        <div class="s-tag" style="color:${ac}">${s.tag||'行動'}</div>
-        <div class="s-ctitle" style="color:${tc}">${s.title||''}</div>
-        <div class="s-csub" style="color:${tc}">${s.body||''}</div>
+        <div class="s-tag" style="${tagStyle}">${s.tag||'行動'}</div>
+        <div class="s-ctitle" style="${cTitleStyle}">${s.title||''}</div>
+        <div class="s-csub" style="${cSubStyle}">${s.body||''}</div>
         <div class="s-accent" style="background:${ac}"></div>`;
     } else {
       inner = `<div class="s-emoji">${s.emoji||''}</div>
-        <div class="s-tag" style="color:${ac}">${s.tag||''}</div>
-        <div class="s-title" style="color:${tc}">${s.title||''}</div>
-        <div class="s-body" style="color:${tc}">${s.body||''}</div>`;
+        <div class="s-tag" style="${tagStyle}">${s.tag||''}</div>
+        <div class="s-title" style="${titleStyle}">${s.title||''}</div>
+        <div class="s-body" style="${bodyStyle}">${s.body||''}</div>`;
     }
     const imgHtml = url
       ? `<img id="bg${i}" class="slide-bg-img" src="${url}" alt="" />`
-      : `<div id="bg${i}" class="slide-bg-fallback"></div>`;
+      : `<div id="bg${i}" class="slide-bg-fallback" style="background:${fallbackBg}"></div>`;
     return `<div class="slide" id="sl${i}">
       ${imgHtml}
-      <div class="slide-ov" style="background:linear-gradient(to top,rgba(0,0,0,0.82) 0%,rgba(0,0,0,${(ov*0.6).toFixed(2)}) 55%,rgba(0,0,0,0.2) 100%)"></div>
+      <div class="slide-ov" style="background:${overlayGrad}"></div>
       <div class="slide-ct">${inner}</div>
-      <span class="slide-num" style="color:${tc}">${i+1}/${total}</span>
+      <span class="slide-num" style="color:${tc};opacity:0.7">${i+1}/${total}</span>
       <button class="slide-retry" onclick="regenImg(${i})">🔄 換圖</button>
     </div>`;
   }).join('');
