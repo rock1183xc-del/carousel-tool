@@ -677,7 +677,10 @@ function renderCarousel(slides, bg, urls) {
       <div class="ig-cap"><b>beehive.tw</b> 滑動看全部重點 →</div>
     </div>
     <div class="regen-bar">
-      <div style="font-size:11px;color:var(--muted)">換掉目前這張背景圖</div>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div style="font-size:11px;color:var(--muted)">換掉目前這張背景圖</div>
+        <button class="btn-regen" style="border-color:rgba(92,184,92,.4);color:#5cb85c;font-size:11px" onclick="downloadAll(this)">📥 下載全部</button>
+      </div>
       <div class="regen-row">
         <span class="regen-lbl">關鍵字</span>
         <input class="regen-input" id="regenKw" placeholder="英文關鍵字…"/>
@@ -765,6 +768,46 @@ document.addEventListener('keydown', e => {
   if (e.key==='ArrowRight') goSlide(curSlide+1);
   if (e.key==='ArrowLeft') goSlide(curSlide-1);
 });
+
+async function loadHtml2Canvas() {
+  if (window.html2canvas) return;
+  await new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+    s.onload = resolve; s.onerror = reject;
+    document.head.appendChild(s);
+  });
+}
+
+async function downloadAll(btn) {
+  const total = slidesData.length;
+  if (!total) return;
+  const orig = btn.textContent;
+  btn.disabled = true; btn.textContent = '載入中…';
+  try {
+    await loadHtml2Canvas();
+    for (let i = 0; i < total; i++) {
+      btn.textContent = `下載 ${i+1}/${total}…`;
+      const el = document.getElementById('sl' + i);
+      if (!el) continue;
+      const canvas = await html2canvas(el, {
+        useCORS: true, allowTaint: false,
+        width: 360, height: 360, scale: 2,
+        backgroundColor: null
+      });
+      const link = document.createElement('a');
+      link.download = `slide-${i+1}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+      await new Promise(r => setTimeout(r, 400));
+    }
+    btn.textContent = '✓ 下載完成';
+    setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, 2000);
+  } catch(e) {
+    btn.textContent = '⚠ 失敗，請重試';
+    setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, 2000);
+  }
+}
 </script>
 </body>
 </html>
