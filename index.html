@@ -692,10 +692,11 @@ function renderCarousel(slides, bg, urls) {
         <button class="btn-regen" style="border-color:rgba(92,184,92,.4);color:#5cb85c;font-size:11px" onclick="downloadAll(this)">📥 下載全部</button>
       </div>
       <div class="regen-row">
-        <span class="regen-lbl">關鍵字</span>
+        <button class="btn-regen" style="border-color:rgba(181,123,238,.4);color:var(--accent);flex-shrink:0" onclick="uploadImg()">📁 上傳圖片</button>
+        <span class="regen-lbl">或輸入</span>
         <input class="regen-input" id="regenKw" placeholder="關鍵字（中英文皆可）…"/>
         <button class="btn-regen" onclick="regenCurrent('unsplash')">隨機圖</button>
-        <button class="btn-regen dalle" onclick="regenCurrent('dalle')">Gemini AI</button>
+        <button class="btn-regen dalle" onclick="regenCurrent('dalle')">AI圖</button>
       </div>
     </div>`;
 }
@@ -708,6 +709,34 @@ function goSlide(n) {
   document.querySelectorAll('.dot').forEach((d,i) => d.classList.toggle('on', i===curSlide));
   document.getElementById('arL')?.classList.toggle('hide', curSlide===0);
   document.getElementById('arR')?.classList.toggle('hide', curSlide===total-1);
+}
+
+function uploadImg(idx) {
+  const target = idx !== undefined ? idx : curSlide;
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+  input.onchange = e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const url = ev.target.result;
+      imgUrls[target] = url;
+      const el = document.getElementById('bg' + target);
+      if (el?.tagName === 'IMG') {
+        el.src = url;
+      } else {
+        const img = document.createElement('img');
+        img.id = 'bg' + target;
+        img.className = 'slide-bg-img';
+        img.src = url;
+        el?.parentNode?.replaceChild(img, el);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+  input.click();
 }
 
 async function regenCurrent(mode) {
