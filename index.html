@@ -124,13 +124,13 @@
   .slide-retry { position: absolute; bottom: 10px; right: 10px; background: rgba(0,0,0,.6); border: 1px solid rgba(255,255,255,.2); border-radius: 6px; color: #fff; font-size: 10px; padding: 4px 8px; cursor: pointer; z-index: 4; font-family: inherit; display: none; }
   .slide:hover .slide-retry { display: block; }
 
-  .s-emoji { font-size: 30px; margin-bottom: 8px; }
-  .s-tag { font-size: 10px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; margin-bottom: 6px; opacity: .8; }
-  .s-ctitle { font-size: 21px; font-weight: 800; line-height: 1.25; }
-  .s-csub { font-size: 13px; margin-top: 8px; opacity: .75; line-height: 1.5; }
-  .s-accent { width: 30px; height: 3px; border-radius: 2px; margin: 10px auto 0; }
-  .s-title { font-size: 18px; font-weight: 700; line-height: 1.3; }
-  .s-body { font-size: 13px; line-height: 1.65; margin-top: 9px; opacity: .85; }
+  .s-emoji { font-size: 36px; margin-bottom: 10px; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.8)); }
+  .s-tag { font-size: 10px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; margin-bottom: 10px; opacity: 1; background: rgba(0,0,0,0.55); padding: 4px 12px; border-radius: 4px; display: inline-block; }
+  .s-ctitle { font-size: 28px; font-weight: 900; line-height: 1.2; text-shadow: 0 2px 14px rgba(0,0,0,1), 0 0 30px rgba(0,0,0,0.9); letter-spacing: 0.02em; }
+  .s-csub { font-size: 14px; margin-top: 10px; opacity: 1; line-height: 1.6; text-shadow: 0 1px 8px rgba(0,0,0,1); background: rgba(0,0,0,0.4); padding: 8px 14px; border-radius: 8px; }
+  .s-accent { width: 36px; height: 3px; border-radius: 2px; margin: 12px auto 0; }
+  .s-title { font-size: 22px; font-weight: 900; line-height: 1.25; text-shadow: 0 2px 12px rgba(0,0,0,1), 0 0 25px rgba(0,0,0,0.9); }
+  .s-body { font-size: 13px; line-height: 1.7; margin-top: 10px; opacity: 1; text-shadow: 0 1px 6px rgba(0,0,0,0.9); background: rgba(0,0,0,0.45); padding: 10px 14px; border-radius: 8px; }
 
   .arrow { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,.45); border: none; border-radius: 50%; width: 28px; height: 28px; color: #fff; font-size: 14px; cursor: pointer; display: none; align-items: center; justify-content: center; z-index: 10; }
   .arrow:hover { background: rgba(0,0,0,.75); }
@@ -461,9 +461,15 @@ function buildPrompt(topic, urlTxt, taDesc, count, apply) {
 ${topic ? `主題：${topic}` : ''}${urlTxt ? `\n\n參考內容：\n${urlTxt}` : ''}
 ${taDesc ? `\n目標受眾（TA）：${taDesc}` : ''}
 
-背景圖片關鍵字（英文，描述畫面氛圍，不要人像）：
+背景圖片關鍵字（英文，電影感情境描述）：
 ${isPer ? `- 每張各給一個關鍵字（依該張內容主題）` : `- 整組共用一個關鍵字`}
-- 要反映**內容主題的視覺氛圍**，而非 TA 的外形，例：肝臟健康→"glowing liver anatomy dark background"，壓力疲勞→"dark moody shadows fatigue"，瘦身→"fresh vegetables healthy food"，財富→"gold coins abundance prosperity"
+- 要有強烈視覺衝擊力，可加入人物情緒場景，例：
+  - 肝臟/器官問題→"worried asian woman touching abdomen dramatic studio light"
+  - 壓力/疲勞→"exhausted woman at office desk late night moody lighting"
+  - 瘦身/健康→"confident fit woman healthy lifestyle vibrant natural light"
+  - 慢性病/發炎→"sick woman lying in bed dramatic cinematic light"
+  - 財務/成功→"successful confident person professional dramatic lighting"
+- 風格：cinematic, dramatic lighting, high contrast, emotional
 
 只回傳 JSON：
 {
@@ -515,12 +521,12 @@ async function fetchImages(parsed, taDesc) {
 
 function unsplashUrl(kw) {
   const seed = Math.floor(Math.random() * 99999);
-  const prompt = `${kw}, realistic photo, atmospheric, cinematic lighting, no people, no text, square format`;
+  const prompt = `${kw}, cinematic photography, dramatic lighting, high contrast, emotional scene, editorial style, no text`;
   return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=720&height=720&nologo=true&seed=${seed}`;
 }
 
 async function dalleGen(kw, taDesc, key) {
-  const prompt = `Instagram background: ${kw}. Abstract atmospheric scene, cinematic mood, no people, no portrait, no text, square format, dark vignette.`;
+  const prompt = `${kw}, dramatic cinematic photography, high contrast, emotional, editorial style, Instagram worthy, no text`;
   const seed = Math.floor(Math.random() * 99999);
   return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=720&height=720&nologo=true&seed=${seed}`;
 }
@@ -559,7 +565,7 @@ function renderCarousel(slides, bg, urls) {
       : `<div id="bg${i}" class="slide-bg-fallback"></div>`;
     return `<div class="slide" id="sl${i}">
       ${imgHtml}
-      <div class="slide-ov" style="background:rgba(0,0,0,${ov})"></div>
+      <div class="slide-ov" style="background:linear-gradient(to top,rgba(0,0,0,0.82) 0%,rgba(0,0,0,${(ov*0.6).toFixed(2)}) 55%,rgba(0,0,0,0.2) 100%)"></div>
       <div class="slide-ct">${inner}</div>
       <span class="slide-num" style="color:${tc}">${i+1}/${total}</span>
       <button class="slide-retry" onclick="regenImg(${i})">🔄 換圖</button>
