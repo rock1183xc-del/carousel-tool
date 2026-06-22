@@ -119,18 +119,19 @@
   .slide-bg-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; z-index: 0; }
   .slide-bg-fallback { position: absolute; inset: 0; background: linear-gradient(135deg,#1a1a2e,#0d0d1a); z-index: 0; }
   .slide-ov { position: absolute; inset: 0; z-index: 1; }
-  .slide-ct { position: relative; z-index: 2; padding: 26px 28px; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+  .slide-ct { position: relative; z-index: 2; padding: 18px 24px 26px; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-end; text-align: left; }
   .slide-num { position: absolute; top: 11px; right: 12px; font-size: 10px; opacity: .6; z-index: 3; }
   .slide-retry { position: absolute; bottom: 10px; right: 10px; background: rgba(0,0,0,.6); border: 1px solid rgba(255,255,255,.2); border-radius: 6px; color: #fff; font-size: 10px; padding: 4px 8px; cursor: pointer; z-index: 4; font-family: inherit; display: none; }
   .slide:hover .slide-retry { display: block; }
 
-  .s-emoji { font-size: 36px; margin-bottom: 10px; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.8)); }
-  .s-tag { font-size: 10px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; margin-bottom: 10px; opacity: 1; background: rgba(0,0,0,0.55); padding: 4px 12px; border-radius: 4px; display: inline-block; }
-  .s-ctitle { font-size: 28px; font-weight: 900; line-height: 1.2; text-shadow: 0 2px 14px rgba(0,0,0,1), 0 0 30px rgba(0,0,0,0.9); letter-spacing: 0.02em; }
-  .s-csub { font-size: 14px; margin-top: 10px; opacity: 1; line-height: 1.6; text-shadow: 0 1px 8px rgba(0,0,0,1); background: rgba(0,0,0,0.4); padding: 8px 14px; border-radius: 8px; }
-  .s-accent { width: 36px; height: 3px; border-radius: 2px; margin: 12px auto 0; }
-  .s-title { font-size: 22px; font-weight: 900; line-height: 1.25; text-shadow: 0 2px 12px rgba(0,0,0,1), 0 0 25px rgba(0,0,0,0.9); }
-  .s-body { font-size: 13px; line-height: 1.7; margin-top: 10px; opacity: 1; text-shadow: 0 1px 6px rgba(0,0,0,0.9); background: rgba(0,0,0,0.45); padding: 10px 14px; border-radius: 8px; }
+  .s-emoji { font-size: 28px; margin-bottom: 6px; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.8)); }
+  .s-tag { font-size: 10px; font-weight: 800; letter-spacing: .15em; text-transform: uppercase; margin-bottom: 10px; padding: 3px 10px; border-radius: 3px; display: inline-block; }
+  .s-punch { font-size: 36px; font-weight: 900; line-height: 1.1; letter-spacing: -0.01em; margin-bottom: 6px; white-space: pre-line; }
+  .s-ctitle { font-size: 16px; font-weight: 700; line-height: 1.35; letter-spacing: 0.01em; }
+  .s-csub { font-size: 12px; margin-top: 8px; line-height: 1.65; }
+  .s-accent { width: 28px; height: 3px; border-radius: 2px; margin: 10px 0; }
+  .s-title { font-size: 19px; font-weight: 900; line-height: 1.3; }
+  .s-body { font-size: 12px; line-height: 1.75; margin-top: 8px; }
 
   .arrow { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,.45); border: none; border-radius: 50%; width: 28px; height: 28px; color: #fff; font-size: 14px; cursor: pointer; display: none; align-items: center; justify-content: center; z-index: 10; }
   .arrow:hover { background: rgba(0,0,0,.75); }
@@ -484,11 +485,11 @@ function buildPrompt(topic, urlTxt, taDesc, count, apply) {
   const isPer = apply === 'per';
   const contentCount = count - 2;
   const slidesExample = [
-    `{"type":"cover","tag":"標籤","title":"封面主標","subtitle":"副標","emoji":"emoji"}`,
+    `{"type":"cover","tag":"標籤","punch":"3-5字衝擊句，讓人一眼就想看下去","title":"支撐punch的副標（一句話）","subtitle":"誘使滑動的說明（點出受眾痛點）","emoji":"emoji"}`,
     ...Array.from({length: contentCount}, (_,i) =>
-      `{"type":"content","tag":"重點${i+1}","title":"核心標題","body":"2-3行說明，口語親切","emoji":"emoji"}`
+      `{"type":"content","tag":"殺手${i+1}（或重點${i+1}）","punch":"1-4字核心詞或數字（例：熬夜、70%、這習慣）","title":"一句精煉說明，道出痛點","body":"1-2句口語說明，有具體感","emoji":"emoji"}`
     ),
-    `{"type":"cta","tag":"行動","title":"CTA標題","body":"呼籲互動文字","emoji":"emoji"}`
+    `{"type":"cta","tag":"行動","punch":"立刻做到","title":"呼籲互動的核心句","body":"說明互動原因或好處","emoji":"emoji"}`
   ].join(',\n    ');
 
   return `請根據以下資訊，生成 Instagram 輪播貼文（共 ${count} 張）。
@@ -496,31 +497,28 @@ function buildPrompt(topic, urlTxt, taDesc, count, apply) {
 ${topic ? `主題：${topic}` : ''}${urlTxt ? `\n\n參考內容：\n${urlTxt}` : ''}
 ${taDesc ? `\n目標受眾（TA）：${taDesc}` : ''}
 
-背景圖片關鍵字（英文，${cardStyle === 'light' ? '明亮正能量' : '電影感情境'}描述）：
-${isPer ? `- 每張各給一個關鍵字（依該張內容主題）` : `- 整組共用一個關鍵字`}
-${cardStyle === 'light' ? `- 主題情境必須跟內容相符，只是打光要明亮柔和，例：
-  - 肝臟/器官問題→"asian woman hand on abdomen worried expression bright natural window light"
-  - 壓力/疲勞→"tired woman rubbing eyes desk bright afternoon soft light"
-  - 瘦身/健康→"woman stepping on scale concerned expression bright bathroom natural light"
-  - 慢性病/發炎→"woman holding medicine bottle concerned bright clean background"
-  - 財務/成功→"confident woman reviewing documents bright modern office natural light"
-- 風格：bright natural light, soft warm tones, airy, clean composition（情境跟暗色一樣，只是光線明亮）` : `- 要有強烈視覺衝擊力，可加入人物情緒場景，例：
-  - 肝臟/器官問題→"worried asian woman touching abdomen dramatic studio light"
-  - 壓力/疲勞→"exhausted woman at office desk late night moody lighting"
-  - 瘦身/健康→"confident fit woman healthy lifestyle vibrant natural light"
-  - 慢性病/發炎→"sick woman lying in bed dramatic cinematic light"
-  - 財務/成功→"successful confident person professional dramatic lighting"
-- 風格：cinematic, dramatic lighting, high contrast, emotional`}
+背景圖片關鍵字（英文攝影描述，必須讓目標受眾「一眼覺得說的就是我！」）：
+${isPer ? `- 每張各給一個關鍵字（依該張內容/情境）` : `- 整組共用一個關鍵字（最能代表整體主題的場景）`}
+- ⚠️ 關鍵：不要泛泛的美照或健康宣傳圖，要真實日常情境+具體情緒，讓受眾「感同身受」
+- 格式：具體人物 + 具體動作/情緒 + 打光風格
+- 依主題舉例：
+  - 肝臟疲勞→"exhausted middle-aged asian woman touching right side of abdomen concerned face"
+  - 睡眠不足→"tired asian mom sitting on bed at night hand on forehead looking drained"
+  - 保健品/藥→"woman staring at pill bottles on bathroom counter looking overwhelmed"
+  - 飲食習慣→"asian woman looking guilty at greasy takeout food late night"
+  - 瘦身停滯→"frustrated woman standing on scale hands on hips disappointed expression"
+  - 慢性疲勞→"woman barely awake at work desk coffee in hand dark circles pale"
+${cardStyle === 'light' ? `- 打光風格：bright natural window light, soft warm tones, airy atmosphere` : `- 打光風格：dramatic studio light OR cinematic moody light, high contrast`}
 
 只回傳 JSON：
 {
   "bg": {
     "text_color": "#ffffff",
     "accent_color": "#hexcolor",
-    "overlay": 0.45,
+    "overlay": 0.5,
     ${isPer
-      ? `"keywords_per_slide": ["kw1","kw2"...共${count}個]`
-      : `"shared_keyword": "english keyword"`
+      ? `"keywords_per_slide": ["kw1","kw2"...共${count}個，每個都要具體情境描述]`
+      : `"shared_keyword": "具體情境英文描述"`
     }
   },
   "slides": [
@@ -529,7 +527,10 @@ ${cardStyle === 'light' ? `- 主題情境必須跟內容相符，只是打光要
   "caption": "完整IG說明欄（含hashtags，繁體中文）"
 }
 
-注意：slides 陣列必須剛好 ${count} 個，第1個 cover，最後1個 cta，中間全部 content。`;
+注意：
+- slides 陣列必須剛好 ${count} 個，第1個 cover，最後1個 cta，中間全部 content
+- punch 是視覺最大的文字，要最衝擊、最能代表這張主題的短句或關鍵詞
+- body 每張最多2句，口語、有具體細節，不要說教式長篇`;
 }
 
 // ── Image fetching ──
@@ -587,55 +588,63 @@ function renderCarousel(slides, bg, urls) {
   const ov = bg.overlay || 0.45;
 
   const overlayGrad = isLight
-    ? `linear-gradient(to top,rgba(255,255,255,0.92) 0%,rgba(255,255,255,${(ov*0.7).toFixed(2)}) 50%,rgba(255,255,255,0.05) 100%)`
-    : `linear-gradient(to top,rgba(0,0,0,0.82) 0%,rgba(0,0,0,${(ov*0.6).toFixed(2)}) 55%,rgba(0,0,0,0.2) 100%)`;
+    ? `linear-gradient(to top,rgba(255,255,255,0.96) 0%,rgba(255,255,255,0.82) 42%,rgba(255,255,255,0.25) 70%,transparent 100%)`
+    : `linear-gradient(to top,rgba(0,0,0,0.90) 0%,rgba(0,0,0,0.70) 38%,rgba(0,0,0,0.32) 65%,rgba(0,0,0,0.05) 100%)`;
 
+  const sh = isLight ? 'none' : '0 2px 16px rgba(0,0,0,1),0 0 30px rgba(0,0,0,0.9)';
+  const shSm = isLight ? 'none' : '0 1px 8px rgba(0,0,0,1)';
   const tagStyle = isLight
     ? `color:${ac};background:rgba(255,255,255,0.92);box-shadow:0 1px 6px rgba(0,0,0,0.12)`
     : `color:${ac};background:rgba(0,0,0,0.55)`;
-  const cTitleStyle = isLight
-    ? `color:${tc};text-shadow:0 1px 4px rgba(255,255,255,0.8)`
-    : `color:${tc};text-shadow:0 2px 14px rgba(0,0,0,1),0 0 30px rgba(0,0,0,0.9)`;
+  const punchStyle = `color:${tc};text-shadow:${sh}`;
+  const cTitleStyle = `color:${tc};opacity:0.9;text-shadow:${shSm}`;
   const cSubStyle = isLight
-    ? `color:${tc};background:rgba(255,255,255,0.88);text-shadow:none;box-shadow:0 2px 8px rgba(0,0,0,0.08)`
-    : `color:${tc};background:rgba(0,0,0,0.4);text-shadow:0 1px 8px rgba(0,0,0,1)`;
-  const titleStyle = isLight
-    ? `color:${tc};text-shadow:0 1px 3px rgba(255,255,255,0.8)`
-    : `color:${tc};text-shadow:0 2px 12px rgba(0,0,0,1),0 0 25px rgba(0,0,0,0.9)`;
+    ? `color:${tc};background:rgba(255,255,255,0.88);padding:7px 12px;border-radius:6px`
+    : `color:${tc};opacity:0.88;text-shadow:${shSm}`;
+  const titleStyle = `color:${tc};opacity:0.9;text-shadow:${shSm}`;
   const bodyStyle = isLight
-    ? `color:${tc};background:rgba(255,255,255,0.88);text-shadow:none;box-shadow:0 2px 8px rgba(0,0,0,0.08)`
-    : `color:${tc};background:rgba(0,0,0,0.45);text-shadow:0 1px 6px rgba(0,0,0,0.9)`;
+    ? `color:${tc};background:rgba(255,255,255,0.88);padding:8px 12px;border-radius:6px`
+    : `color:${tc};opacity:0.88;text-shadow:${shSm}`;
   const fallbackBg = isLight ? '#f0f0f8' : 'linear-gradient(135deg,#1a1a2e,#0d0d1a)';
 
   const slidesHtml = slides.map((s, i) => {
     const url = urls[i];
+    const punch = s.punch || '';
+    const bgNum = s.type === 'content'
+      ? `<div style="position:absolute;top:14px;left:20px;font-size:80px;font-weight:900;line-height:1;opacity:0.07;color:${tc};z-index:2;pointer-events:none">${String(i).padStart(2,'0')}</div>`
+      : '';
     let inner = '';
     if (s.type === 'cover') {
       inner = `<div class="s-emoji">${s.emoji||'✨'}</div>
         <div class="s-tag" style="${tagStyle}">${s.tag||''}</div>
-        <div class="s-ctitle" style="${cTitleStyle}">${s.title||''}</div>
-        <div class="s-csub" style="${cSubStyle}">${s.subtitle||''}</div>
-        <div class="s-accent" style="background:${ac}"></div>`;
+        <div class="s-punch" style="${punchStyle}">${punch || s.title||''}</div>
+        <div class="s-accent" style="background:${ac}"></div>
+        ${punch && s.title ? `<div class="s-ctitle" style="${cTitleStyle}">${s.title}</div>` : ''}
+        ${s.subtitle ? `<div class="s-csub" style="${cSubStyle}">${s.subtitle}</div>` : ''}`;
     } else if (s.type === 'cta') {
       inner = `<div class="s-emoji">${s.emoji||'👇'}</div>
         <div class="s-tag" style="${tagStyle}">${s.tag||'行動'}</div>
-        <div class="s-ctitle" style="${cTitleStyle}">${s.title||''}</div>
-        <div class="s-csub" style="${cSubStyle}">${s.body||''}</div>
-        <div class="s-accent" style="background:${ac}"></div>`;
+        <div class="s-punch" style="${punchStyle}">${punch || s.title||''}</div>
+        <div class="s-accent" style="background:${ac}"></div>
+        ${punch && s.title ? `<div class="s-ctitle" style="${cTitleStyle}">${s.title}</div>` : ''}
+        ${s.body ? `<div class="s-csub" style="${cSubStyle}">${s.body}</div>` : ''}`;
     } else {
       inner = `<div class="s-emoji">${s.emoji||''}</div>
         <div class="s-tag" style="${tagStyle}">${s.tag||''}</div>
-        <div class="s-title" style="${titleStyle}">${s.title||''}</div>
-        <div class="s-body" style="${bodyStyle}">${s.body||''}</div>`;
+        <div class="s-punch" style="${punchStyle}">${punch || s.title||''}</div>
+        <div class="s-accent" style="background:${ac}"></div>
+        ${punch && s.title ? `<div class="s-title" style="${titleStyle}">${s.title}</div>` : ''}
+        ${s.body ? `<div class="s-body" style="${bodyStyle}">${s.body}</div>` : ''}`;
     }
     const imgHtml = url
       ? `<img id="bg${i}" class="slide-bg-img" src="${url}" alt="" />`
       : `<div id="bg${i}" class="slide-bg-fallback" style="background:${fallbackBg}"></div>`;
     return `<div class="slide" id="sl${i}">
       ${imgHtml}
+      ${bgNum}
       <div class="slide-ov" style="background:${overlayGrad}"></div>
       <div class="slide-ct">${inner}</div>
-      <span class="slide-num" style="color:${tc};opacity:0.7">${i+1}/${total}</span>
+      <span class="slide-num" style="color:${tc};opacity:0.6">${i+1}/${total}</span>
       <button class="slide-retry" onclick="regenImg(${i})">🔄 換圖</button>
     </div>`;
   }).join('');
