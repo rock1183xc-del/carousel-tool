@@ -334,7 +334,10 @@ function selImgMode(m) {
 function selCardStyle(s) {
   cardStyle = s;
   document.querySelectorAll('[data-st]').forEach(c => c.classList.toggle('on', c.dataset.st === s));
-  if (slidesData.length) renderCarousel(slidesData, bgData, imgUrls);
+  if (slidesData.length) {
+    renderCarousel(slidesData, bgData, imgUrls);
+    regenAllImages();
+  }
 }
 
 async function regenAllImages() {
@@ -493,15 +496,21 @@ function buildPrompt(topic, urlTxt, taDesc, count, apply) {
 ${topic ? `主題：${topic}` : ''}${urlTxt ? `\n\n參考內容：\n${urlTxt}` : ''}
 ${taDesc ? `\n目標受眾（TA）：${taDesc}` : ''}
 
-背景圖片關鍵字（英文，電影感情境描述）：
+背景圖片關鍵字（英文，${cardStyle === 'light' ? '明亮正能量' : '電影感情境'}描述）：
 ${isPer ? `- 每張各給一個關鍵字（依該張內容主題）` : `- 整組共用一個關鍵字`}
-- 要有強烈視覺衝擊力，可加入人物情緒場景，例：
+${cardStyle === 'light' ? `- 要明亮、正能量、讓人想點讚的視覺，例：
+  - 肝臟/健康→"happy asian woman drinking green juice bright kitchen natural light"
+  - 壓力/疲勞→"smiling woman stretching outdoors bright morning sunlight"
+  - 瘦身/健康→"energetic fit woman running park golden hour bright"
+  - 慢性病/預防→"cheerful woman eating colorful salad clean bright background"
+  - 財務/成功→"confident smiling woman working laptop bright modern office"
+- 風格：bright natural light, cheerful, airy, clean, uplifting, pastel` : `- 要有強烈視覺衝擊力，可加入人物情緒場景，例：
   - 肝臟/器官問題→"worried asian woman touching abdomen dramatic studio light"
   - 壓力/疲勞→"exhausted woman at office desk late night moody lighting"
   - 瘦身/健康→"confident fit woman healthy lifestyle vibrant natural light"
   - 慢性病/發炎→"sick woman lying in bed dramatic cinematic light"
   - 財務/成功→"successful confident person professional dramatic lighting"
-- 風格：cinematic, dramatic lighting, high contrast, emotional
+- 風格：cinematic, dramatic lighting, high contrast, emotional`}
 
 只回傳 JSON：
 {
@@ -553,12 +562,16 @@ async function fetchImages(parsed, taDesc) {
 
 function unsplashUrl(kw) {
   const seed = Math.floor(Math.random() * 99999);
-  const prompt = `${kw}, cinematic photography, dramatic lighting, high contrast, emotional scene, editorial style, no text`;
+  const prompt = cardStyle === 'light'
+    ? `${kw}, bright natural daylight, cheerful, airy, soft pastel colors, clean background, uplifting, editorial photography, no text`
+    : `${kw}, cinematic photography, dramatic lighting, high contrast, emotional scene, editorial style, no text`;
   return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=720&height=720&nologo=true&seed=${seed}`;
 }
 
 async function dalleGen(kw, taDesc, key) {
-  const prompt = `${kw}, dramatic cinematic photography, high contrast, emotional, editorial style, Instagram worthy, no text`;
+  const prompt = cardStyle === 'light'
+    ? `${kw}, bright natural light photography, cheerful, optimistic, clean aesthetic, vibrant fresh colors, uplifting, Instagram worthy, no text`
+    : `${kw}, dramatic cinematic photography, high contrast, emotional, editorial style, Instagram worthy, no text`;
   const seed = Math.floor(Math.random() * 99999);
   return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=720&height=720&nologo=true&seed=${seed}`;
 }
