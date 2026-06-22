@@ -266,6 +266,12 @@
     </div>
 
     <div class="grp">
+      <div class="lbl">指定 CTA（選填）</div>
+      <input type="text" id="ctaInput" placeholder="例：追蹤帳號獲取更多健康知識 👆" />
+      <div class="hint">留空讓 AI 自動生成 CTA</div>
+    </div>
+
+    <div class="grp">
       <div class="lbl">張數</div>
       <div class="count-row">
         <button class="cnt" onclick="selCount(this)">4</button>
@@ -451,7 +457,8 @@ async function generate() {
 
   try {
     stTxt.textContent = 'AI 規劃輪播內容…';
-    const prompt = buildPrompt(topic, urlTxt, taDesc, slideCount, applyMode);
+    const ctaText = document.getElementById('ctaInput').value.trim();
+    const prompt = buildPrompt(topic, urlTxt, taDesc, slideCount, applyMode, ctaText);
     const raw = await callClaude(prompt, '你是專業的 Instagram 輪播貼文策劃師。只回傳合法 JSON，不含其他文字或 markdown 符號。');
     const j0 = raw.indexOf('{'), j1 = raw.lastIndexOf('}');
     if (j0 < 0 || j1 < 0) throw new Error('AI 回傳格式異常，請重試');
@@ -481,7 +488,7 @@ async function generate() {
   }
 }
 
-function buildPrompt(topic, urlTxt, taDesc, count, apply) {
+function buildPrompt(topic, urlTxt, taDesc, count, apply, ctaText) {
   const isPer = apply === 'per';
   const contentCount = count - 2;
   const slidesExample = [
@@ -530,7 +537,8 @@ ${cardStyle === 'light' ? `- 打光風格：bright natural window light, soft wa
 注意：
 - slides 陣列必須剛好 ${count} 個，第1個 cover，最後1個 cta，中間全部 content
 - punch 是視覺最大的文字，要最衝擊、最能代表這張主題的短句或關鍵詞
-- body 每張最多2句，口語、有具體細節，不要說教式長篇`;
+- body 每張最多2句，口語、有具體細節，不要說教式長篇
+${ctaText ? `- 最後一張 cta 的 body 必須使用這段指定文字（原文照用，不要改）：「${ctaText}」` : ''}`;
 }
 
 // ── Image fetching ──
