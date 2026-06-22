@@ -226,6 +226,19 @@
     </div>
 
     <div class="grp">
+      <div class="lbl">品牌視覺風格（選填）</div>
+      <input type="text" id="stylePrefs" placeholder="例：韓系質感、乾淨明亮、粉嫩色調…" />
+      <div class="hint">自動附加到每次生圖提示詞，會記住下次不用重填</div>
+      <div style="display:flex;gap:6px;align-items:center;margin-top:4px">
+        <button class="btn-s" onclick="document.getElementById('styleRefInput').click()">📎 上傳風格參考圖</button>
+        <span id="styleRefName" style="font-size:10px;color:var(--muted);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+        <button class="btn-s" onclick="clearStyleRef()" style="display:none" id="styleRefClearBtn">✕</button>
+      </div>
+      <input type="file" id="styleRefInput" accept="image/*" style="display:none" onchange="analyzeStyle(this);document.getElementById('styleRefClearBtn').style.display='block'" />
+      <div id="styleRefStatus" class="hint" style="display:none;margin-top:4px"></div>
+    </div>
+
+    <div class="grp">
       <div class="lbl">背景圖片來源</div>
       <div class="img-mode-row" style="grid-template-columns:1fr 1fr 1fr">
         <div class="imc on" data-m="unsplash" onclick="selImgMode('unsplash')">
@@ -315,20 +328,25 @@
 // ── State ──
 let slideCount = 5, imgMode = 'unsplash', applyMode = 'shared', cardStyle = 'dark';
 let selectedTAs = [], fetchedUrls = [], curSlide = 0, slidesData = [], bgData = {};
-let imgUrls = [];
+let imgUrls = [], analyzedStyleDesc = '';
 
 function getGeminiKey() {
   return document.getElementById('geminiKey').value.trim();
 }
 
-// 自動儲存/載入 API Key
+// 自動儲存/載入 API Key & 風格偏好
 document.addEventListener('DOMContentLoaded', () => {
-  const saved = localStorage.getItem('geminiKey');
-  if (saved) document.getElementById('geminiKey').value = saved;
+  const savedKey = localStorage.getItem('geminiKey');
+  if (savedKey) document.getElementById('geminiKey').value = savedKey;
+  const savedStyle = localStorage.getItem('stylePrefs');
+  if (savedStyle) document.getElementById('stylePrefs').value = savedStyle;
 });
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('geminiKey').addEventListener('change', e => {
     if (e.target.value.trim()) localStorage.setItem('geminiKey', e.target.value.trim());
+  });
+  document.getElementById('stylePrefs').addEventListener('input', e => {
+    localStorage.setItem('stylePrefs', e.target.value);
   });
 });
 
@@ -390,20 +408,15 @@ function selTab(name, btn) {
 }
 
 // ── Gemini API call ──
-async function callClaude(userPrompt, system) {
+async function callClaude(userPrompt, system, imageData) {
   const key = getGeminiKey();
   if (!key) throw new Error('請先輸入 Gemini API Key！');
+  const body = { max_tokens: 4096, system: system || '', messages: [{ role: 'user', content: userPrompt }] };
+  if (imageData) body.imagePart = imageData;
   const res = await fetch('/api/claude', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': key
-    },
-    body: JSON.stringify({
-      max_tokens: 4096,
-      system: system || '',
-      messages: [{ role: 'user', content: userPrompt }]
-    })
+    headers: { 'Content-Type': 'application/json', 'x-api-key': key },
+    body: JSON.stringify(body)
   });
   const data = await res.json();
   if (data.error) throw new Error('API 錯誤：' + data.error.message);
@@ -577,18 +590,26 @@ async function fetchImages(parsed, taDesc) {
   }
 }
 
+function getStyleSuffix() {
+  const prefs = (document.getElementById('stylePrefs')?.value || '').trim();
+  const parts = [prefs, analyzedStyleDesc].filter(Boolean);
+  return parts.length ? ', ' + parts.join(', ') : '';
+}
+
 function unsplashUrl(kw) {
   const seed = Math.floor(Math.random() * 99999);
+  const style = getStyleSuffix();
   const prompt = cardStyle === 'light'
-    ? `${kw}, bright natural window light, airy atmosphere, soft warm tones, clean editorial photography, no text`
-    : `${kw}, cinematic photography, dramatic lighting, high contrast, emotional scene, editorial style, no text`;
+    ? `${kw}${style}, bright natural window light, airy atmosphere, soft warm tones, clean editorial photography, no text`
+    : `${kw}${style}, cinematic photography, dramatic lighting, high contrast, emotional scene, editorial style, no text`;
   return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=720&height=720&nologo=true&seed=${seed}`;
 }
 
 async function dalleGen(kw, taDesc, key) {
+  const style = getStyleSuffix();
   const prompt = cardStyle === 'light'
-    ? `${kw}, bright natural light, airy soft tones, clean composition, editorial photography, Instagram worthy, no text`
-    : `${kw}, dramatic cinematic photography, high contrast, emotional, editorial style, Instagram worthy, no text`;
+    ? `${kw}${style}, bright natural light, airy soft tones, clean composition, editorial photography, Instagram worthy, no text`
+    : `${kw}${style}, dramatic cinematic photography, high contrast, emotional, editorial style, Instagram worthy, no text`;
   const seed = Math.floor(Math.random() * 99999);
   return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=720&height=720&nologo=true&seed=${seed}`;
 }
@@ -709,6 +730,58 @@ function goSlide(n) {
   document.querySelectorAll('.dot').forEach((d,i) => d.classList.toggle('on', i===curSlide));
   document.getElementById('arL')?.classList.toggle('hide', curSlide===0);
   document.getElementById('arR')?.classList.toggle('hide', curSlide===total-1);
+}
+
+async function resizeToBase64(file, maxPx = 800) {
+  return new Promise(resolve => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      let w = img.width, h = img.height;
+      if (w > maxPx || h > maxPx) {
+        if (w > h) { h = Math.round(h * maxPx / w); w = maxPx; }
+        else { w = Math.round(w * maxPx / h); h = maxPx; }
+      }
+      const c = document.createElement('canvas');
+      c.width = w; c.height = h;
+      c.getContext('2d').drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(url);
+      resolve(c.toDataURL('image/jpeg', 0.8).split(',')[1]);
+    };
+    img.src = url;
+  });
+}
+
+async function analyzeStyle(input) {
+  const file = input.files[0];
+  if (!file) return;
+  if (!getGeminiKey()) { alert('請先輸入 Gemini API Key！'); return; }
+  const statusEl = document.getElementById('styleRefStatus');
+  const nameEl = document.getElementById('styleRefName');
+  nameEl.textContent = file.name;
+  statusEl.style.display = 'block';
+  statusEl.textContent = '分析風格中…';
+  try {
+    const base64 = await resizeToBase64(file);
+    const desc = await callClaude(
+      '請分析這張圖片的視覺風格，輸出適合 AI 圖片生成的英文風格關鍵詞（色調、光線、氛圍、構圖），15字以內，只輸出關鍵詞，不要解釋。',
+      '你是視覺風格分析師，只輸出英文風格關鍵詞。',
+      { mimeType: file.type, data: base64 }
+    );
+    analyzedStyleDesc = desc.trim();
+    statusEl.textContent = `✓ 風格已分析：${analyzedStyleDesc}`;
+    statusEl.style.color = '#5cb85c';
+  } catch(e) {
+    statusEl.textContent = '⚠ 分析失敗：' + e.message;
+    statusEl.style.color = '#dc5050';
+  }
+}
+
+function clearStyleRef() {
+  analyzedStyleDesc = '';
+  document.getElementById('styleRefName').textContent = '';
+  document.getElementById('styleRefStatus').style.display = 'none';
+  document.getElementById('styleRefInput').value = '';
 }
 
 function uploadImg(idx) {

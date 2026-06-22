@@ -8,11 +8,17 @@ export default async function handler(req, res) {
   const apiKey = req.headers['x-api-key'];
   if (!apiKey) return res.status(400).json({ error: { message: 'Missing API key' } });
 
-  const { system, messages, max_tokens } = req.body;
+  const { system, messages, max_tokens, imagePart } = req.body;
   const userText = messages?.[0]?.content || '';
 
+  const userParts = [];
+  if (imagePart?.data) {
+    userParts.push({ inlineData: { mimeType: imagePart.mimeType || 'image/jpeg', data: imagePart.data } });
+  }
+  userParts.push({ text: userText });
+
   const geminiBody = {
-    contents: [{ role: 'user', parts: [{ text: userText }] }],
+    contents: [{ role: 'user', parts: userParts }],
     generationConfig: { maxOutputTokens: max_tokens || 4096 }
   };
   if (system) geminiBody.systemInstruction = { parts: [{ text: system }] };
