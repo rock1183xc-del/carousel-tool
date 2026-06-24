@@ -229,13 +229,14 @@
       <div class="lbl">品牌視覺風格（選填）</div>
       <input type="text" id="stylePrefs" placeholder="例：韓系質感、乾淨明亮、粉嫩色調…" />
       <div class="hint">自動附加到每次生圖提示詞，會記住下次不用重填</div>
-      <div style="display:flex;gap:6px;align-items:center;margin-top:4px">
-        <button class="btn-s" onclick="document.getElementById('styleRefInput').click()">📎 上傳風格參考圖</button>
-        <span id="styleRefName" style="font-size:10px;color:var(--muted);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
-        <button class="btn-s" onclick="clearStyleRef()" style="display:none" id="styleRefClearBtn">✕</button>
+      <div id="styleRefZone" onclick="document.getElementById('styleRefInput').click()" style="margin-top:6px;border:1.5px dashed var(--accent2);border-radius:8px;padding:12px 10px;cursor:pointer;text-align:center;transition:all .2s;background:var(--surface2)" onmouseover="this.style.borderColor='var(--accent)';this.style.background='var(--glow)'" onmouseout="this.style.borderColor='var(--accent2)';this.style.background='var(--surface2)'">
+        <div style="font-size:20px;margin-bottom:4px">🖼️</div>
+        <div style="font-size:11px;font-weight:600;color:var(--accent)">上傳風格參考圖</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:2px">AI 自動分析色調・光線・氛圍</div>
+        <div id="styleRefName" style="font-size:10px;color:var(--accent);margin-top:6px;display:none"></div>
       </div>
-      <input type="file" id="styleRefInput" accept="image/*" style="display:none" onchange="analyzeStyle(this);document.getElementById('styleRefClearBtn').style.display='block'" />
-      <div id="styleRefStatus" class="hint" style="display:none;margin-top:4px"></div>
+      <input type="file" id="styleRefInput" accept="image/*" style="display:none" onchange="analyzeStyle(this)" />
+      <div id="styleRefStatus" class="hint" style="display:none;margin-top:6px;padding:6px 8px;border-radius:6px;background:var(--surface2)"></div>
     </div>
 
     <div class="grp">
@@ -769,8 +770,10 @@ async function analyzeStyle(input) {
       { mimeType: file.type, data: base64 }
     );
     analyzedStyleDesc = desc.trim();
-    statusEl.textContent = `✓ 風格已分析：${analyzedStyleDesc}`;
+    statusEl.textContent = `✓ 風格：${analyzedStyleDesc}`;
     statusEl.style.color = '#5cb85c';
+    const nm = document.getElementById('styleRefName');
+    if (nm) { nm.textContent = '📎 ' + file.name; nm.style.display = 'block'; }
   } catch(e) {
     statusEl.textContent = '⚠ 分析失敗：' + e.message;
     statusEl.style.color = '#dc5050';
@@ -779,8 +782,10 @@ async function analyzeStyle(input) {
 
 function clearStyleRef() {
   analyzedStyleDesc = '';
-  document.getElementById('styleRefName').textContent = '';
-  document.getElementById('styleRefStatus').style.display = 'none';
+  const nm = document.getElementById('styleRefName');
+  if (nm) { nm.textContent = ''; nm.style.display = 'none'; }
+  const st = document.getElementById('styleRefStatus');
+  if (st) st.style.display = 'none';
   document.getElementById('styleRefInput').value = '';
 }
 
